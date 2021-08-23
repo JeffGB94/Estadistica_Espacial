@@ -101,15 +101,16 @@ library(tidyverse)
 library(maps)
 ```
 
-
 # Análisis descriptivo
 
-Para leer el archivo se utiliza la función *"read_csv"* de la librería *"tidyverse"* de la siguiente manera, visualizando la dimensión de la base de datos con la función *"dim"*.
+Para leer el archivo se utiliza la función *"read_csv"* de la librería *"tidyverse"* y se visualiza la dimensión de la base de datos con la función *"dim"*.
 
 ```{r}
 firesCA <- read_csv(file = "https://raw.githubusercontent.com/JeffGB94/Estadistica_Espacial/main/Trabajo%2002/Base/California_Fire_Incidents.csv")
 
-dim(firesCA)
+M <- as.data.frame(t(dim(firesCA)))
+names(M) <- c("Filas", "Columnas")
+ITabla(M)
 ```
 
 Todos los incendios forestales registrados en la base de datos se encuentran inactivos o han sido contenidos. Debido a la gran cantidad de variables, seleccionamos algunas para visualizar un poco mejor las localizaciones de incendios, tales como:
@@ -124,7 +125,6 @@ Todos los incendios forestales registrados en la base de datos se encuentran ina
 
 - **Latitude** y **Longitude** corresponden a las coordenadas geográficas de cada uno de los incendios forestales
 
-
 ```{r}
 # Selección de variables
 firesCA <- firesCA %>% select(AcresBurned, ArchiveYear, Name, 
@@ -132,15 +132,17 @@ firesCA <- firesCA %>% select(AcresBurned, ArchiveYear, Name,
 ```
 
 ```{r, echo=FALSE}
-head(firesCA)
+M <- as.data.frame(head(firesCA))
+ITabla(M)
 ```
-
 
 Para saber el número de incendios que ocurrieron por año, visualizamos el número de registros con la función **table**. Se puede observar que el año 2017 fue el periodo donde más hubo incendios.
 
-```{r}
+```{r, echo = FALSE}
 # ¿Cuántos incendios ocurrieron en cada año?
-table(firesCA$ArchiveYear)
+M <- as.data.frame((table(firesCA$ArchiveYear)))
+names(M) <- c("Año", "Freq")
+ITabla(M)
 ```
 
 Se desea entonces observar y analizar el patrón de puntos de incendios forestales ocurridos durante el año 2017 en el estado de California. De esta manera realizamos el filtro correspondiente por año de ocurrencia y además, eliminamos aquellas observaciones con errores en sus coordenadas geográficas:
@@ -152,7 +154,7 @@ firesCA2017 <- firesCA %>% filter(ArchiveYear == 2017, Longitude != 0, Latitude 
 
 Sin embargo, la base de datos sigue registrando seis observaciones duplicadas de acuerdo a sus coordenadas geográficas. Eliminamos dichas observaciones de la siguiente manera:
 
-```{r}
+```{r, echo=TRUE}
 # ¿Hay datos duplicados?: 6 por valores de longitud y latitud
 sum(duplicated(firesCA2017 %>% select(Longitude, Latitude)))
 firesCA2017 <- firesCA2017[!duplicated(firesCA2017 %>% select(Longitude, Latitude)),]
@@ -160,7 +162,7 @@ firesCA2017 <- firesCA2017[!duplicated(firesCA2017 %>% select(Longitude, Latitud
 
 La función **project** del paquete **rgdal** ofrece una interfaz con la librería *PROJ.4* de funciones de proyección para datos de posición geográfica. Para poder utilizar esta función debemos extraer las coordenadas de cada uno de los incendios en una matriz. Realizamos la proyección correspondiente de acuerdo a la zona UTM en la cual se encuentra el estado de California y de acuerdo al elipsoide **WGS84** (Sistema Geodésico Mundial).  
 
-```{r}
+```{r, echo = TRUE}
 # Seleccionando las coordenadas
 coordFiresCA2017 <- firesCA2017 %>% select(Longitude, Latitude) %>% as.matrix()
 # Proyección de coordenadas a UTM
@@ -241,21 +243,39 @@ El siguiente fragmento de código divide el estado de California en una cuadricu
 
 ```{r}
 Q <- quadratcount(FiresCA2017_ppp)
-plot(FiresCA2017_ppp, pch = 20, main = "Conteo por cuadrantes")
+plot(FiresCA2017_ppp, pch = 20, main = "Conteo por cuadrantes", cols = "#00000088")
 plot(Q, col = 2, add = TRUE)
 ```
 
-Se puede calcular la densidad de puntos dentro de cada cuadrante de la siguiente manera:
+Se puede calcular la densidad de puntos dentro de cada cuadrante pero cada cuadrante esta en metros cuadrados, por ello para una visualización numérica se decidió pasar las localizaciones en $km^2$ de la siguiente manera:
 
-```{r}
-Q.d <- intensity(Q)
-# Plot the density
+```{r, echo = TRUE}
+# Reescalamiento a kilometros
+FiresCA2017_ppp.km <- rescale(FiresCA2017_ppp, 1000, "km")
+
+# Conteo por cuadrantes en km
+Q <- quadratcount(FiresCA2017_ppp.km)
+# Intensidad
+Q.d <- density(FiresCA2017_ppp.km)
+
+par(mfrow = c(1,2), no.readonly = T)
+# plot de la densidad
 plot(intensity(Q, image = T), main = "Densidad de incendios forestales \n en California", 
      las = 1)
-plot(FiresCA2017_ppp, pch = 20, cex = 0.6, col = rgb(0,0,0,.5), add = T)
+plot(FiresCA2017_ppp.km, pch = 20, cex = 0.6, col = rgb(0,0,0,.5), add = T, cols = "#00000088")
+# Intensidad estimada
+plot(Q.d, main = "Intensidad Estimada")
+contour(Q.d, add = T)
 ```
+La intensidad espacial estimada para los incendios en California en el año 2017, proporciona una idea de lo que podemos esperar que pase en esa misma región en un futuro no muy lejano.
 
 ```{r}
-getwd()
+persp(Q.d, main = "Superficie para la intensidad de incendios 2017", theta = -50, phi = 30, shade = 0.75, ticktype = "detailed", xlab = "x", ylab = "y", zlab = "", cex.axis = 0.7, cex.lab = 0.7)
 ```
+
+
+
+
+
+
 
