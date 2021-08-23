@@ -3,7 +3,7 @@ title: |
   \includegraphics[width=25cm]{EscudoUN.png}  
   \thispagestyle{empty} 
   \vspace*{2.0cm} 
-  \textbf{\huge Localización de ocurrencia de incendios en el 2017 de USA \\Estadística espacial}  
+  \textbf{\huge Título del trabajo \\Materia}  
   \vspace{5.07cm}
 author: |
  |  \Large \textbf{Daniela Arbeláez Montoya}
@@ -69,6 +69,19 @@ options(kableExtra.latex.load_packages = FALSE)
 require(kableExtra)
 ```
 
+```{=tex}
+\newpage
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\pagestyle{plain}
+```
+```{r}
+ITabla <- function(M){
+  kbl(M, booktabs = T) %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+}
+```
+
 # Introducción
 
 California es uno de los lugares que tiene las temporadas de incendios forestales más mortíferas y destructivas. El conjunto de datos contiene la lista de incendios forestales ocurridos en California entre 2013 y 2020. El conjunto de datos contiene la ubicación donde ocurrieron los incendios forestales, incluido el nombre del condado, los valores de latitud y longitud y también detalles sobre cuándo comenzó el incendio forestal.
@@ -91,7 +104,7 @@ library(maps)
 
 # Análisis descriptivo
 
-Para leer el archivo se utiliza la función *"read_csv"* de la librería *"tidyverse"* asignando el nombre de *"firesCA"* y luego la estructura de la base de datos con la función *"glimpse".* que consta de 1636 filas y 40 columnas con la descripción de cada variable.
+Para leer el archivo se utiliza la función *"read_csv"* de la librería *"tidyverse"* de la siguiente manera y luego la estructura de la base de datos con la función *"glimpse".*
 
 ```{r}
 firesCA <- read_csv(file = "https://raw.githubusercontent.com/JeffGB94/Estadistica_Espacial/main/Trabajo%2002/Base/California_Fire_Incidents.csv")
@@ -99,69 +112,54 @@ firesCA <- read_csv(file = "https://raw.githubusercontent.com/JeffGB94/Estadisti
 glimpse(firesCA)
 ```
 
-Luego se seleccionan las variables de interés, donde *AcresBurned* son los acres quemados en un año determinado, *Active* indica si el incendio sigue activo (*TRUE*) o no (*FALSE*), *ArchiveYear* es el año donde se tomó la localización del incendio, *Name* es el nombre de incendio, *Counties* son los condados donde se inició el incendio, *Status* muestra si el incendio esta finalizado o inactivo, y por último *Latitude* y *Longitude* indica la latitud y a latitud respectivamente. 
+Luego 
 
 ```{r}
+# Selección de variables
 firesCA <- firesCA %>% select(AcresBurned, Active, ArchiveYear, Name, 
                               Counties, Status, Latitude, Longitude)
 ```
 
-En base a todas estas observaciones, ¿cuántos incendios ocurrieron durante el periodo de observación? 
-
 ```{r}
+# ¿Cuántos incendios ocurrieron en cada año?
 table(firesCA$ArchiveYear)
 ```
-El año donde se presentaron más incendios fue en el 2017 y en el que menos se presentaron fue en el 2014, para nuestro estudio usaremos el año 2017 de esta manera.
 
 ```{r}
 # Seleccionando el año 2017
 firesCA2017 <- firesCA %>% filter(ArchiveYear == 2017, Longitude != 0, Latitude != 0)
 ```
 
-Al seleccionar el año 2017, se busca si hay localizaciones duplicadas, y posteriormente se encontraron 6 observaciones que se retiraron de la base de datos.
-
 ```{r}
-Nduplicado<- sum(duplicated(firesCA2017 %>% select(Longitude, Latitude)))
+# ¿Hay datos duplicados?: 6 por valores de longitud y latitud
+sum(duplicated(firesCA2017 %>% select(Longitude, Latitude)))
 firesCA2017 <- firesCA2017[!duplicated(firesCA2017 %>% select(Longitude, Latitude)),]
 ```
-
-Ahora se proyectan las coordenadas a *UTM* con un datum *WGS84*
 
 ```{r}
 # Seleccionando las coordenadas
 coordFiresCA2017 <- firesCA2017 %>% select(Longitude, Latitude) %>% as.matrix()
-
 # Proyección de coordenadas a UTM
 pointsFiresCA2017 <- project(coordFiresCA2017, "+proj=utm +zone=11N +ellps=WGS84") %>% 
   as.data.frame() %>% rename(X = Longitude, Y = Latitude)
-
 pointsFiresCA2017 <- pointsFiresCA2017 %>% filter(!is.infinite(X))
 ```
 
-\textbf{Poligono de Estados Unidos}
-
-Se utiliza la función *map_data* para extraer la base de datos del contorno estados unidos, y posteriormente se filtra para estraer sólo la de California. 
 
 ```{r}
 # Base de datos de Estados Unidos
 UnitedStates <- map_data("state")
 # ¿Qué estados?
 table(UnitedStates$region)
+```
 
+```{r}
 # Filtramos para California
 California <- UnitedStates %>% filter(region == "california")
-```
-
-Al hacer el filtro se dibuja el contorno para verificar si esta definido correctamente. 
-
-```{r}
 ggplot(California, aes(x=long, y=lat)) +
   geom_polygon(fill="white", colour="black") + coord_map("mercator")
-```
-Luego se proyectan el contorno a coordenadas *UTM* en la zona 11 y un datum *WGS84* y se anexan las localizaciones.
 
-```{r}
-# Coordenadas del borde para proyección
+# Coordenadas del borde para proyecci?n
 coordCA_border <- California %>% select(long, lat) %>% as.matrix()
 coordCA_border <- project(coordCA_border, "+proj=utm +zone=11N +ellps=WGS84") %>% 
   as.data.frame() %>% rename(X = long, Y = lat)
@@ -169,17 +167,37 @@ coordCA_border <- project(coordCA_border, "+proj=utm +zone=11N +ellps=WGS84") %>
 ggplot(data = coordCA_border, aes(x = X, y = Y)) + 
   geom_polygon(fill = "white", color = "black") +
   geom_point(data = pointsFiresCA2017, aes(x = X, y = Y), color = "red") +
-  ggtitle("Localización de Incendios en California, año 2017")
-```
+  ggtitle("Localizaci?n de Incendios en California, a?o 2017")
 
-```{r}
-# Creación del objeto owin a partir del borde
+# Creaci?n del objeto owin a partir del borde
 contpolyCA <- owin(poly = data.frame(x = rev(coordCA_border$X), y = rev(coordCA_border$Y)))
 plot(contpolyCA)
 
-# Creación del objeto ppp a partir del patrón de puntos
+# Creaci?n del objeto ppp a partir del patr?n de puntos
 FiresCA2017_ppp <- ppp(x = pointsFiresCA2017$X, y = pointsFiresCA2017$Y, window = contpolyCA)
+
+# ¿Cómo eliminar los puntos que están fuera del contorno?
+ok <- inside.owin(x = FiresCA2017_ppp$x, y = FiresCA2017_ppp$y, w = contpolyCA)
+pp.in <- data.frame(x = FiresCA2017_ppp$x[ok], y = FiresCA2017_ppp$y[ok])
+pcg <- ppp(x = pp.in$x, y = pp.in$y, window = contpolyCA)
+```
+# Procesos puntuales
+## Análisis basado en densidad
+##Densidad cuadrática
+El siguiente fragmento de código divide el estado de California en una cuadricula 9 filas, 6 columnas y luego se hace el conteo de las localizaciones que caen en cada cuadrante.
+```{r}
+Q<-quadratcount(pcg)
+plot(pcg,pch=20,main=NULL)
+plot(Q,col=2,add=TRUE)
 ```
 
-# Procesos puntuales
+Se puede calcular la densidad de puntos dentro de cada cuadrante de la siguiente manera:
+```{r}
+Q.d<- intensity(Q)
+#Plot the density
+plot(intensity(Q,image = T),main=NULL,las=1)
+plot(pcg, pch=20, cex=0.6,col=rgb(0,0,0,.5),add=T)
+
+```
+
 
