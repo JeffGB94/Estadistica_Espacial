@@ -272,7 +272,18 @@ La intensidad espacial estimada para los incendios en California en el año 2017
 ```{r}
 persp(Q.d, main = "Superficie para la intensidad de incendios 2017", theta = -50, phi = 30, shade = 0.75, ticktype = "detailed", xlab = "x", ylab = "y", zlab = "", cex.axis = 0.7, cex.lab = 0.7)
 ```
+# Tecnica Manual
 
+## Gráfico de Patterson - Fry
+
+```{r}
+# Gráfico de índice de Fry
+fryplot(FiresCA2017_ppp, main = "Gráfico de Fry")
+```
+
+Al realizar el gráfico de Patterson se observa que todos los puntos se distribuyen homogéneamente de manera aleatoria, por ello se presume aleatoriedad completa.
+
+# Función K
 
 
 
