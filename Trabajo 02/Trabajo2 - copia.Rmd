@@ -1,0 +1,179 @@
+---
+title: |
+  \includegraphics[width=25cm]{EscudoUN.png}  
+  \thispagestyle{empty} 
+  \vspace*{2.0cm} 
+  \textbf{\huge Localización de ocurrencia de incendios en el 2017 de USA \\Estadística espacial}  
+  \vspace{5.07cm}
+author: |
+ |  \Large \textbf{Daniela Arbeláez Montoya}
+ |  \Large \textbf{Jefferson Gamboa Betancur}
+ |  \Large \textbf{Jean Paul Piedrahita García}
+ |  \vspace{5cm}
+date: |
+  | \small Universidad Nacional de Colombia
+  | Ciencias, Escuela de Estadística
+  | Medellín, Colombia
+  | 2021
+documentclass: article
+geometry: 
+  - top=2cm
+  - left=1.8cm
+  - right=2cm
+  - bottom=2.54cm
+fontsize: 12pt
+pagestyle: empty
+papersize: a4
+linestretch: 1.5
+linkcolor: blue
+links-as-notes: true
+lang: "es"
+header-includes:
+- \usepackage[utf8]{inputenc}
+- \setlength{\parindent}{0pt}
+- \usepackage{graphicx}
+- \pagenumbering{gobble}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+- \usepackage{hyperref}
+output: 
+    pdf_document: 
+      toc: yes
+      number_sections: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  cache = TRUE,
+  message = FALSE,
+  error = FALSE,
+  warning = FALSE,
+  tidy = TRUE,
+  tidy.opts=list(width.cutoff = 55),
+  prompt = TRUE
+  )
+options(kableExtra.latex.load_packages = FALSE)
+require(kableExtra)
+```
+
+# Introducción
+
+California es uno de los lugares que tiene las temporadas de incendios forestales más mortíferas y destructivas. El conjunto de datos contiene la lista de incendios forestales ocurridos en California entre 2013 y 2020. El conjunto de datos contiene la ubicación donde ocurrieron los incendios forestales, incluido el nombre del condado, los valores de latitud y longitud y también detalles sobre cuándo comenzó el incendio forestal.
+
+Estos datos ayudan a generar información sobre qué lugares de California están bajo amenaza de incendio, a qué hora suelen ocurrir los incendios forestales y qué tan frecuentes y devastadores son.
+
+La base de datos con la que se va realizar el análisis de patrones puntuales fue descargada de ![kaggle]("https://www.kaggle.com/ananthu017/california-wildfire-incidents-20132020").
+
+Los paquetes a utilizar son los siguientes: 
+
+```{r}
+library(spatstat)
+library(sf)
+library(raster)
+library(rgdal)
+library(tidyverse)
+library(maps)
+```
+
+
+# Análisis descriptivo
+
+```{r, echo = FALSE}
+# Base de Jean
+w <- "D:/Desktop/estadistica/Estadistica Espacial/PatronPuntual/California_Fire_Incidents.csv"
+# Base de Jeff
+w <- "G:\\.shortcut-targets-by-id\\1V_O8G9bWOSInBF42aFPjy2hzaXWRELzw\\Estadística Espacial\\Trabajo 2\\California_Fire_Incidents.csv"
+# Base de Dani
+w <- 
+```
+
+Para leer el archivo se utiliza la función *"read_csv"* de la librería *"tidyverse"* de la siguiente manera y luego la estructura de la base de datos con la función *"glimpse".*
+
+```{r}
+firesCA <- read_csv(file = w)
+
+glimpse(firesCA)
+```
+
+Luego 
+
+```{r}
+# Selecciòn de variables
+firesCA <- firesCA %>% select(AcresBurned, Active, ArchiveYear, Name, 
+                              Counties, Status, Latitude, Longitude)
+```
+
+```{r}
+# ¿Cuántos incendios ocurrieron en cada año?
+table(firesCA$ArchiveYear)
+```
+
+```{r}
+# Seleccionando el a?o 2017
+firesCA2017 <- firesCA %>% filter(ArchiveYear == 2017, Longitude != 0, Latitude != 0)
+```
+
+```{r}
+# ?Hay datos duplicados?: 6 por valores de longitud y latitud
+sum(duplicated(firesCA2017 %>% select(Longitude, Latitude)))
+firesCA2017 <- firesCA2017[!duplicated(firesCA2017 %>% select(Longitude, Latitude)),]
+```
+
+```{r}
+# Seleccionando las coordenadas
+coordFiresCA2017 <- firesCA2017 %>% select(Longitude, Latitude) %>% as.matrix()
+# Proyecci?n de coordenadas a UTM
+pointsFiresCA2017 <- project(coordFiresCA2017, "+proj=utm +zone=11N +ellps=WGS84") %>% 
+  as.data.frame() %>% rename(X = Longitude, Y = Latitude)
+```
+
+
+```{r}
+# Base de datos de Estados Unidos
+UnitedStates <- map_data("state")
+# ?Qu? estados?
+table(UnitedStates$region)
+```
+
+```{r}
+# Filtramos para California
+California <- UnitedStates %>% filter(region == "california")
+ggplot(California, aes(x=long, y=lat)) +
+  geom_polygon(fill="white", colour="black") + coord_map("mercator")
+
+# Coordenadas del borde para proyecci?n
+coordCA_border <- California %>% select(long, lat) %>% as.matrix()
+coordCA_border <- project(coordCA_border, "+proj=utm +zone=11N +ellps=WGS84") %>% 
+  as.data.frame() %>% rename(X = long, Y = lat)
+
+ggplot(data = coordCA_border, aes(x = X, y = Y)) + 
+  geom_polygon(fill = "white", color = "black") +
+  geom_point(data = pointsFiresCA2017, aes(x = X, y = Y), color = "red") +
+  ggtitle("Localizaci?n de Incendios en California, a?o 2017")
+
+# Creaci?n del objeto owin a partir del borde
+contpolyCA <- owin(poly = data.frame(x = rev(coordCA_border$X), y = rev(coordCA_border$Y)))
+plot(contpolyCA)
+
+# Creaci?n del objeto ppp a partir del patr?n de puntos
+FiresCA2017_ppp <- ppp(x = pointsFiresCA2017$X, y = pointsFiresCA2017$Y, window = contpolyCA)
+```
+
+
+
+
+# Procesos puntuales
+
