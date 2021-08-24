@@ -3,7 +3,7 @@ title: |
   \includegraphics[width=25cm]{EscudoUN.png}  
   \thispagestyle{empty} 
   \vspace*{2.0cm} 
-  \textbf{\huge Título del trabajo \\Materia}  
+  \textbf{\huge Patrones puntuales para los incendios en California en el 2017}  
   \vspace{5.07cm}
 author: |
  |  \Large \textbf{Daniela Arbeláez Montoya}
@@ -75,12 +75,13 @@ require(kableExtra)
 \setcounter{page}{2}
 \pagestyle{plain}
 ```
-```{r}
+```{r, echo = FALSE}
 ITabla <- function(M){
   kbl(M, booktabs = T) %>%
   kable_styling(latex_options = c("striped", "hold_position"))
 }
 ```
+
 
 # Introducción
 
@@ -92,18 +93,23 @@ La base de datos con la que se va realizar el análisis de patrones puntuales fu
 
 Los paquetes a utilizar son los siguientes: 
 
-```{r}
+```{r, echo = TRUE}
 library(spatstat)
 library(sf)
 library(raster)
 library(rgdal)
 library(tidyverse)
 library(maps)
+library(plot3D)
+library(rgl)
+library(stpp)
+library(rpanel)
+library(KernSmooth)
 ```
 
 # Análisis descriptivo
 
-Para leer el archivo se utiliza la función *"read_csv"* de la librería *"tidyverse"* y se visualiza la dimensión de la base de datos con la función *"dim"*.
+Para leer el archivo se utiliza la función *"read_csv"* de la librería *"tidyverse"* de la siguiente manera, visualizando la dimensión de la base de datos con la función *"dim"*.
 
 ```{r}
 firesCA <- read_csv(file = "https://raw.githubusercontent.com/JeffGB94/Estadistica_Espacial/main/Trabajo%2002/Base/California_Fire_Incidents.csv")
@@ -125,7 +131,7 @@ Todos los incendios forestales registrados en la base de datos se encuentran ina
 
 - **Latitude** y **Longitude** corresponden a las coordenadas geográficas de cada uno de los incendios forestales
 
-```{r}
+```{r, echo = TRUE}
 # Selección de variables
 firesCA <- firesCA %>% select(AcresBurned, ArchiveYear, Name, 
                               Counties, Latitude, Longitude)
@@ -147,9 +153,10 @@ ITabla(M)
 
 Se desea entonces observar y analizar el patrón de puntos de incendios forestales ocurridos durante el año 2017 en el estado de California. De esta manera realizamos el filtro correspondiente por año de ocurrencia y además, eliminamos aquellas observaciones con errores en sus coordenadas geográficas:
 
-```{r}
+```{r, echo=TRUE}
 # Seleccionando el año 2017
-firesCA2017 <- firesCA %>% filter(ArchiveYear == 2017, Longitude != 0, Latitude != 0)
+firesCA2017 <- firesCA %>% filter(ArchiveYear == 2017, Longitude != 0, 
+                                  Latitude != 0)
 ```
 
 Sin embargo, la base de datos sigue registrando seis observaciones duplicadas de acuerdo a sus coordenadas geográficas. Eliminamos dichas observaciones de la siguiente manera:
@@ -157,7 +164,8 @@ Sin embargo, la base de datos sigue registrando seis observaciones duplicadas de
 ```{r, echo=TRUE}
 # ¿Hay datos duplicados?: 6 por valores de longitud y latitud
 sum(duplicated(firesCA2017 %>% select(Longitude, Latitude)))
-firesCA2017 <- firesCA2017[!duplicated(firesCA2017 %>% select(Longitude, Latitude)),]
+firesCA2017 <- firesCA2017[!duplicated(firesCA2017 %>% select(Longitude,
+                                                              Latitude)),]
 ```
 
 La función **project** del paquete **rgdal** ofrece una interfaz con la librería *PROJ.4* de funciones de proyección para datos de posición geográfica. Para poder utilizar esta función debemos extraer las coordenadas de cada uno de los incendios en una matriz. Realizamos la proyección correspondiente de acuerdo a la zona UTM en la cual se encuentra el estado de California y de acuerdo al elipsoide **WGS84** (Sistema Geodésico Mundial).  
@@ -166,7 +174,8 @@ La función **project** del paquete **rgdal** ofrece una interfaz con la librer�
 # Seleccionando las coordenadas
 coordFiresCA2017 <- firesCA2017 %>% select(Longitude, Latitude) %>% as.matrix()
 # Proyección de coordenadas a UTM
-pointsFiresCA2017 <- project(coordFiresCA2017, "+proj=utm +zone=11N +ellps=WGS84") %>% 
+pointsFiresCA2017 <- project(coordFiresCA2017, 
+                             "+proj=utm +zone=11N +ellps=WGS84") %>% 
   as.data.frame() %>% rename(X = Longitude, Y = Latitude)
 ```
 
@@ -178,7 +187,7 @@ pointsFiresCA2017 <- pointsFiresCA2017 %>% filter(!is.infinite(X))
 
 El paquete **maps** contiene la base de datos **state** que produce un mapa de los estados del territorio continental de los Estados Unidos generado a partir de los datos del Departamento del Censo del mismo país; estos datos contiene las coordenadas geográficas de los polígonos correspondientes a cada uno de los estados.  
 
-```{r}
+```{r, echo = T}
 # Base de datos de Estados Unidos
 UnitedStates <- map_data("state")
 # ¿Qué estados?
@@ -187,7 +196,7 @@ names(table(UnitedStates$region))
 
 Realizamos el flitro correspondiente al estado de California para obtener el polígono. La función **map_data** del paquete **ggplot2** convierte fácilmente los datos del paquete de **maps** en un marco de datos adecuado para trazar con **ggplot2**. La opción **Mercator** indica meridianos rectos igualmente espaciados, concordantes y rumbos rectos de la brújula.
 
-```{r}
+```{r, echo =T}
 # Filtramos para California
 California <- UnitedStates %>% filter(region == "california")
 ggplot(California, aes(x=long, y=lat)) +
@@ -203,10 +212,11 @@ rm(UnitedStates)
 
 De la misma manera realizamos la proyección de las coordenadas geográficas en planas de acuerdo a la zona UTM correspondiente al estado de California. 
 
-```{r}
+```{r, echo = T}
 # Coordenadas del borde para proyección
 coordCA_border <- California %>% select(long, lat) %>% as.matrix()
-coordCA_border <- project(coordCA_border, "+proj=utm +zone=11N +ellps=WGS84") %>% 
+coordCA_border <- project(coordCA_border, 
+                          "+proj=utm +zone=11N +ellps=WGS84") %>% 
   as.data.frame() %>% rename(X = long, Y = lat)
 ```
 
@@ -214,13 +224,17 @@ Luego de la proyección, podemos crear el objeto **owin** corresponndiente a la 
 
 ```{r}
 # Creación del objeto owin a partir del borde
-contpolyCA <- owin(poly = data.frame(x = rev(coordCA_border$X), y = rev(coordCA_border$Y)))
+contpolyCA <- owin(poly = data.frame(x = rev(coordCA_border$X), 
+                                     y = rev(coordCA_border$Y)))
 
 # ¿Cómo eliminar los puntos que están fuera del contorno?
-ok <- inside.owin(x = pointsFiresCA2017$X, y = pointsFiresCA2017$Y, w = contpolyCA)
-pointsFiresCA2017 <- data.frame(X = pointsFiresCA2017$X[ok], Y = pointsFiresCA2017$Y[ok])
+ok <- inside.owin(x = pointsFiresCA2017$X, y = pointsFiresCA2017$Y, 
+                  w = contpolyCA)
+pointsFiresCA2017 <- data.frame(X = pointsFiresCA2017$X[ok], 
+                                Y = pointsFiresCA2017$Y[ok])
 # Creación del objeto ppp a partir del patrón de puntos
-FiresCA2017_ppp <- ppp(x = pointsFiresCA2017$X, y = pointsFiresCA2017$Y, window = contpolyCA)
+FiresCA2017_ppp <- ppp(x = pointsFiresCA2017$X, y = pointsFiresCA2017$Y, 
+                       window = contpolyCA)
 ```
 
 Visualizamos la proyección de los puntos en nuestra ventana de observación
@@ -234,7 +248,6 @@ ggplot(data = coordCA_border, aes(x = X, y = Y)) +
 ```
 
 # Procesos puntuales
-
 
 ## Densidad cuadrática
 
@@ -259,9 +272,11 @@ Q.d <- density(FiresCA2017_ppp.km)
 
 par(mfrow = c(1,2), no.readonly = T)
 # plot de la densidad
-plot(intensity(Q, image = T), main = "Densidad de incendios forestales \n en California", 
+plot(intensity(Q, image = T), 
+     main = "Densidad de incendios forestales \n en California", 
      las = 1)
-plot(FiresCA2017_ppp.km, pch = 20, cex = 0.6, col = rgb(0,0,0,.5), add = T, cols = "#00000088")
+plot(FiresCA2017_ppp.km, pch = 20, cex = 0.6, col = rgb(0,0,0,.5), add = T, 
+     cols = "#00000088")
 # Intensidad estimada
 plot(Q.d, main = "Intensidad Estimada")
 contour(Q.d, add = T)
@@ -270,7 +285,9 @@ contour(Q.d, add = T)
 La intensidad espacial estimada para los incendios en California en el año 2017, proporciona una idea de lo que podemos esperar que pase en esa misma región en un futuro no muy lejano.
 
 ```{r}
-persp(Q.d, main = "Superficie para la intensidad de incendios 2017", theta = -50, phi = 30, shade = 0.75, ticktype = "detailed", xlab = "x", ylab = "y", zlab = "", cex.axis = 0.7, cex.lab = 0.7)
+persp(Q.d, main = "Superficie para la intensidad de incendios 2017", 
+      theta = -50, phi = 30, shade = 0.75, ticktype = "detailed", xlab = "x", 
+      ylab = "y", zlab = "", cex.axis = 0.7, cex.lab = 0.7)
 ```
 
 # Análisis basado en la distancia
@@ -280,6 +297,7 @@ persp(Q.d, main = "Superficie para la intensidad de incendios 2017", theta = -50
 A continuación, calcularemos las distancias promedio de vecino más cercano (ANN) entre la ocurrencia de incendios del año 2017 en California.
 
 Para calcular la distancia promedio del primer vecino más cercano (en acres), se establece $k=1$:
+
 ```{r}
 mean(nndist(FiresCA2017_ppp.km, k = 1))
 ```
@@ -299,7 +317,9 @@ ANN <- apply(nndist(FiresCA2017_ppp.km, k = 1:150), 2, FUN = mean)
 plot(ANN ~ eval(1:150), type = "b", main = "Vecinos mas cercanos", las = 1, xlab = "Orden del vecino", ylab = "Distancia media en km")
 ```
 
-# Tecnica Manual
+\newpage
+
+# Tecnicas Manuales
 
 ## Gráfico de Patterson - Fry
 
@@ -312,43 +332,35 @@ Al realizar el gráfico de Patterson Fry se observa que todos los puntos muestra
 
 # Analisis de segundo orden para la incidencia de incendios en California en el 2017
 
-## Función K
+## Función K y F estimada.
 
 ```{r}
+par(mfrow=c(1,2))
 plot(Kest(FiresCA2017_ppp.km), main  = "K-estimada")
-```
-
-Debido a que las estimaciones estan por encima de la curva teórica, se puede pensar que se trata de un proceso de agregación.
-
-## Función F
-
-```{r}
 plot(Fest(FiresCA2017_ppp.km), main = "F-estimada")
 ```
 
-Cómo las curvas estimadas estan por debajo de la curva teórica (Azul) se supone que es un patrón de agregación.
+- Para la gráfica de K-estimada se ve que debido a que las estimaciones estan por encima de la curva teórica, se puede pensar que se trata de un proceso de agregación.
 
-## Función G
+- Cómo la función F-Estimada las curvas estan por debajo de la curva teórica (Azul) se supone que es un patrón de agregación. 
+
+## Función G estimada y PCF.
 
 ```{r}
+par(mfrow = c(1,2))
 plot(Gest(FiresCA2017_ppp.km), main = "G-estimada")
-```
-
-Como las funciones estimadas para la G están por encima de la teórica se presume que el patrón es de agración.
-
-## Función de correlación por pares
-
-```{r}
 plot(pcf(FiresCA2017_ppp.km), main = "pair-correlation estimada")
 ```
 
-Debido a que las estimaciones se alejan por arriba de la teórica en distancias pequeñas se puede asumir que la hipótesis del patrón puntual es de agregación.
+- Como las funciones estimadas para la G están por encima de la teórica se presume que el patrón es de agregación.
+
+- Debido a que las estimaciones de la función de correlación por pares se alejan por arriba de la teórica en distancias pequeñas se puede asumir que la hipótesis del patrón puntual es de agregación.
 
 # Test para aleatoriedad completa
 
 ## Pointwise Envelopes
 
-```{r}
+```{r, echo=TRUE, include=FALSE}
 K1 <- envelope(FiresCA2017_ppp.km, Kest, nsim = 39, fix.n = TRUE)
 P1 <- envelope(FiresCA2017_ppp.km, pcf, nsim = 39, fix.n = TRUE)
 F1 <- envelope(FiresCA2017_ppp.km, Fest, nsim = 39, fix.n = TRUE)
@@ -356,19 +368,210 @@ G1 <- envelope(FiresCA2017_ppp.km, Gest, nsim = 39, fix.n = TRUE)
 ```
 
 ```{r}
-par(mfrow = c(2,2), no.readonly = T)
+par(mfrow = c(1,2), no.readonly = T)
 plot(K1, main = "Envelopes usando K")
 plot(P1, main = "Envelopes usando PCF")
-plot(F1, main = "Envelopes usando F")
-plot(G1, main = "Envelopes usando G")
 ```
 
 - Con el test para la aleatoriedad completa se puede concluir que el patrón se aleja por arriba de la curva teórica y además la sombra gris no contiene la curva negra que es la función K-estimada, por ello se asume que es un patrón de agregación. 
 
-- Para la función PCF-estimada a distancias cortas se sobre ajusta a la curva teórica y además las sombras grises no cubren a la función estimada a distancias pequeñas intuyendo un patrón de agregación.  
+- Para la función PCF-estimada a distancias cortas se sobre ajusta a la curva teórica y además las sombras grises no cubren a la función estimada a distancias pequeñas intuyendo un patrón de agregación.
+
+```{r}
+par(mfrow = c(1,2))
+plot(F1, main = "Envelopes usando F")
+plot(G1, main = "Envelopes usando G")
+```
 
 - Para la función F el mecánica es al contrario, cuando la función F-estimada esta por debajo de la ajustada se supone que el patrón es de agregación.
 
 - En la función G al tener la curva estima por encima de la teórica se supone que el patrón es de agregación.
 
+# Análisis Espacio-Temporal
 
+Debemos recordar que la base de datos principal, llamada en este caso **firesCA**, contiene los registros de incendios forestales ocurridos en el Estado de California entre los años 2013 y 2019, por lo que es posible analizar la dinámica e interacción (correlación) a través del tiempo entre los eventos espaciales de los incendios. En esta última sección se desarrolla un análisis espacio-temporal de los datos, extendiendo los modelos de procesos puntuales espaciales hacia este contexto.
+
+La base de datos contiene 187 registros duplicados, los cuales son eliminados de la misma manera que se realizó para los datos de los incendios forestales del 2017.
+
+```{r}
+# ¿Hay datos duplicados?: 187 por valores de longitud y latitud
+firesCA <- firesCA[!duplicated(firesCA %>% select(Longitude, Latitude)),] %>% 
+  filter(Longitude != 0, Latitude != 0)
+```
+
+Para poder desarrollar el análisis, es necesario entonces adecuar correctamente los datos con los mismos pasos hechos anteriormente, proyectando todos los puntos en coordenadas UTM.
+
+```{r}
+# Seleccionando las coordenadas
+pointsFiresCA <- firesCA %>% select(Longitude, Latitude) %>% as.matrix()
+# Proyección de coordenadas a UTM
+pointsFiresCA <- project(pointsFiresCA, "+proj=utm +zone=11N +ellps=WGS84") %>% 
+  as.data.frame() %>% rename(X = Longitude, Y = Latitude) 
+
+# Eliminando los valores infinitos
+pointsFiresCA$time <- firesCA$ArchiveYear
+pointsFiresCA <- pointsFiresCA %>% filter(!is.infinite(X))
+```
+
+Como se mencionó anteriormente, algunas observaciones o puntos recaen por fuera de la ventana de observación, por tanto se realiza la corrección con la función **inside.owin**
+
+```{r}
+# ¿Cómo eliminar los puntos que están fuera del contorno?
+ok <- inside.owin(x = pointsFiresCA$X, y = pointsFiresCA$Y, w = contpolyCA)
+pointsFiresCA <- data.frame(X = pointsFiresCA$X[ok], Y = pointsFiresCA$Y[ok],
+                           time = pointsFiresCA$time[ok])
+```
+
+## Creación del objeto stpp
+
+La función **as.3dpoints** del paquete **spatstat** coloca a punto los datos en formato espacio-temporal. Para esto, es necesario ingresarle una matriz de tres columnas, de las cuales las dos primeras corresponden a las coordenadas planas y la tercera al tiempo.
+
+
+```{r}
+# Incendios forestales en Castellón entre 2013 y 2019
+FiresCA_stpp <- as.3dpoints(as.matrix(pointsFiresCA))
+```
+
+Recordemos que un proceso aleatorio espacio-temporal es un proceso estocástico indexado en el espacio y tiempo. En este caso, los eventos que corresponde a cada uno de los incendios forman un conjunto numerable de puntos:
+
+$$P = \lbrace (u_i, t_i) \; con \; i = 1, 2, \ldots,  \rbrace$$
+donde $u_i \in \mathbb{R}^2$ es la localización espacial de los incendios en coordenadas planas y $t_i \in \mathbb{R}$ es el tiempo de ocurrencia de cada uno de los incendios entre los años 2013 y 2019.
+
+Es importante recordar que un proceso puntual espacio-temporal se denomina separable si las componentes de espacio y tiempo de la función de intensidad se pueden estudiar por separado.
+
+## Análisis descriptivo
+
+La función **plot.stpp**, cuyos autores son Edith Gabriel y Francisco Rodríguez, contiene diferentes formas de visualizar los datos de espacio-tiempo de acuerdo a los argumentos que se ingresen.
+
+- La función utiliza por defecto **type = "projection"**, la cual traza las ubicaciones xy y la distribución acumulada de los tiempos. El argumento **style** permite adecuar el gráfico en formato **ggplot2**. Acá podemos observar todos los puntos sobre la ventana de observación, además de una especie de escala en la parte del tiempo, en donde se incrementa más por el año 2017
+
+```{r}
+# Localizaciones y acumulaciones
+plot(FiresCA_stpp, s.region = as.matrix(coordCA_border), style = "elegant")
+```
+
+- La opción **type = "scatter** permite crear un gráfico 3D del patrón de puntos.
+
+```{r}
+# Gráfico 3D
+plot(FiresCA_stpp, s.region = as.matrix(coordCA_border), 
+     type = "scatter", style = "elegant", theta = 45, phi = 30, cex = 0.5,
+     ticktype = "detailed", pch = 19)
+```
+
+- Si la opción **mark = TRUE**, luego el tiempo se trata como una marca cuantitativa adjunta a cada ubicación, y las ubicaciones se trazan con el tamaño y / o el color del símbolo de trazado determinado por el valor de la marca.
+
+```{r}
+# Gráfico de tiempo
+plot(FiresCA_stpp, s.region = as.matrix(coordCA_border), 
+     pch = 19, mark = TRUE)
+```
+
+Se puede crear una animación de puntos de acuerdo al tiempo en que ocurrieron empleando la función **animation**. Adicionalmente, la función **stan** muestra datos de puntos (x, y, t) y permite resaltar dinámicamente segmentos de tiempo.
+
+```{r, eval=FALSE}
+# Gráfico de animación
+animation(FiresCA_stpp, s.region = as.matrix(coordCA_border), runtime = 5, cex = 0.7)
+```
+
+```{r, eval=FALSE}
+# Grafico con stan
+stan(FiresCA_stpp, bgpoly = as.matrix(coordCA_border), bgframe = F)
+```
+
+# Estimación de la intensidad Espacio-Temporal
+
+La primera etapa de un análisis estadístico es por lo general estimar y modelar la función de intensidad. El hecho de asumir separabilidad entre el espacio y el tiempo divide la estimación en dos componentes reduciendo la dimensión. Como ya se ha estudiado en módulos anteriores, un
+estimador muy sencillo e intuitivo consiste en contar, para cada localización, el número
+de eventos dentro de un disco centrado en dicho evento y para un radio fijo.
+
+El siguiente gráfico corresponde a la estimación no paramétrica de la intensidad temporal y espacial para el patrón de incendios forestales en California.
+
+```{r}
+# Analisis espacial y temporal de las propiedades de primer orden
+ppFiresCA <- ppp(x = FiresCA_stpp[,1], y = FiresCA_stpp[,2], window = contpolyCA)
+
+# Intensidad espacial
+ippFiresCA <- density(ppFiresCA, diggle = TRUE)
+ippFiresCA1 <- density(ppFiresCA, diggle = TRUE, at="points")
+
+FiresCA_stpp <- as.3dpoints(FiresCA_stpp[, 1], FiresCA_stpp[, 2], FiresCA_stpp[,3])
+Calif_borde <- as.matrix(coordCA_border)
+
+Mt <- density(FiresCA_stpp[ ,3], n = 1000)
+mut <- Mt$y[findInterval(FiresCA_stpp[ ,3], Mt$x)] * dim(FiresCA_stpp)[1]
+
+# Gráficos espacial y temporal de la intensidad
+par(mfrow = c(1, 2)) 
+plot(Mt, type = "l", xlab = "\n t = time", ylab = "", main = "Intensidad temporal")
+plot(ippFiresCA, xlab = "x", ylab = "y", main = "Intensidad espacial")
+```
+
+
+## Características de segundo orden
+
+Las propiedades de segundo orden se utilizan para analizar y describir la estructura de correlación espacio-temporal que existe entre los eventos de un proceso puntual. Las funciones de espacio temporal no homogéneas **pair-correlation g** y **K-function** se pueden utilizar como medidas para verificar agrupación o regularidad espacio temporal, además como cuantificadores de la interacción espacio-temporal.
+
+## Función K
+
+La **K function** se define en este caso para la estimación como el número medio de incendios dentro de un cilindro de radio $r$ y altura $2t$ alrededor de un incendio *típico* del patrón (sin contar dicho incendio central). Por lo tanto $K(r,t)$ describe las características del proceso de puntos a muchas escalas. La interpretación se realiza en base a la superficie teórica.
+
+```{r}
+# Función K
+stik <- STIKhat(xyt = FiresCA_stpp, s.region = Calif_borde,
+                lambda = ippFiresCA1 * mut / dim(FiresCA_stpp)[1])
+```
+
+```{r}
+# Gráfico teorico y estimado de la K-función inhomogenea spacio-temporal
+par(mfrow=c(1,2))
+plotK(stik)
+rk <- range(0, max(stik$Khat, stik$Ktheo))
+persp3D(stik$dist, stik$times, stik$Khat, theta=45, phi=30, zlim=rk,
+        facets=FALSE, col="grey", ticktype= "detailed", xlab="r = distance",
+        ylab="t = time", zlab="", nticks=5, cex.axis=1, cex.lab=1,
+        main="K-función spacio-temporal")
+
+persp3D(stik$dist, stik$times, stik$Ktheo, theta=45, phi=30, zlim=rk,
+        facets=FALSE, col="black", ticktype= "detailed", xlab="r = distance",
+        ylab="t = time", zlab="", nticks=5, cex.axis=1, cex.lab=1, add=TRUE)
+```
+
+
+## Función Pair-Correlation
+
+Dado que la función $K$ es en cierta forma una función de distribución acumulada, en ocasiones puede ser necesario disponer de una función que caracterice de forma no acumulativa el patrón, es decir que tenga en cuenta tan sólo los pares de puntos que se encuentran separados por una distancia exactamente igual o similar a la distancia $(r, t)$.
+
+```{r}
+# Distancias espaciales y temporales
+ds <- dist(FiresCA_stpp[,1:2])
+dt <- dist(FiresCA_stpp[,3])
+# Parámetro de suavizado espacial
+hso <- dpik(ds, kernel = "epanech") # 14931 metros
+# Parámetro de suavizado temporal
+hto <- dpik(dt, kernel = "epanech") # 0.008 años
+# Vector de distancias espaciales
+u <- seq(hso, max(ds)/4, len=15)
+# Vector de distancias temporales
+v <- seq(hto, max(dt)/4, len=15)
+```
+
+```{r}
+stig <- PCFhat(xyt = FiresCA_stpp, lambda = ippFiresCA1 * mut / dim(FiresCA_stpp)[1], 
+               dist = u, times = v, s.region = Calif_borde, ks = "epanech", 
+               hs = hso, kt = "epanech", ht = hto)
+```
+
+```{r}
+# Grafico teorico y estimado de la pair-correlation inhomogenea espacio-temporal
+par(mfrow=c(1,1))
+rg <- range(0, max(stig$pcf,1))
+persp3D(stig$dist, stig$times, stig$pcf, theta=45, phi=30, zlim=rg,
+        facets=FALSE, col="grey", colvar = NULL, ticktype= "detailed",
+        xlab="r = distance", ylab="t = time", zlab="", nticks=5, cex.axis=1,
+        cex.lab=1, main="Función pair-correlation espacio-temporal")
+
+persp3D(stig$dist, stig$times, 1, theta=45, phi=30, zlim=rg, facets=FALSE,
+        col="black", colvar = NULL, ticktype= "detailed", xlab="r = distance",
+        ylab="t = time", zlab="", nticks=5, cex.axis=1, cex.lab=1, add=TRUE)
+```
