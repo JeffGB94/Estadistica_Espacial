@@ -235,11 +235,10 @@ ggplot(data = coordCA_border, aes(x = X, y = Y)) +
 
 # Procesos puntuales
 
-## Análisis basado en densidad
 
 ## Densidad cuadrática
 
-El siguiente fragmento de código divide el estado de California en una cuadricula 9 filas, 6 columnas y luego se hace el conteo de las localizaciones que caen en cada cuadrante.
+El siguiente fragmento de código divide el estado de California en una cuadricula 5 filas, 5 columnas y luego se hace el conteo de las localizaciones que caen en cada cuadrante.
 
 ```{r}
 Q <- quadratcount(FiresCA2017_ppp)
@@ -267,26 +266,109 @@ plot(FiresCA2017_ppp.km, pch = 20, cex = 0.6, col = rgb(0,0,0,.5), add = T, cols
 plot(Q.d, main = "Intensidad Estimada")
 contour(Q.d, add = T)
 ```
+
 La intensidad espacial estimada para los incendios en California en el año 2017, proporciona una idea de lo que podemos esperar que pase en esa misma región en un futuro no muy lejano.
 
 ```{r}
 persp(Q.d, main = "Superficie para la intensidad de incendios 2017", theta = -50, phi = 30, shade = 0.75, ticktype = "detailed", xlab = "x", ylab = "y", zlab = "", cex.axis = 0.7, cex.lab = 0.7)
 ```
+
+# Análisis basado en la distancia
+
+## Análisis de vecino más cercano promedio
+
+A continuación, calcularemos las distancias promedio de vecino más cercano (ANN) entre la ocurrencia de incendios del año 2017 en California.
+
+Para calcular la distancia promedio del primer vecino más cercano (en acres), se establece $k=1$:
+```{r}
+mean(nndist(FiresCA2017_ppp.km, k = 1))
+```
+
+Para calcular el conjunto de distancia promedio del segundo vecino mas cercano, se usa:
+
+```{r}
+mean(nndist(FiresCA2017_ppp.km, k = 2))
+```
+
+El parámetro $k$ puede tomar cualquier orden vecino (hasta $n-1$ donde n es el número total de puntos).
+
+A continuación se traza ANN como una función del orden de vecinos para los primeros 150 vecinos mas cercanos.
+
+```{r}
+ANN <- apply(nndist(FiresCA2017_ppp.km, k = 1:150), 2, FUN = mean)
+plot(ANN ~ eval(1:150), type = "b", main = "Vecinos mas cercanos", las = 1, xlab = "Orden del vecino", ylab = "Distancia media en km")
+```
+
 # Tecnica Manual
 
 ## Gráfico de Patterson - Fry
 
 ```{r}
 # Gráfico de índice de Fry
-fryplot(FiresCA2017_ppp, main = "Gráfico de Fry")
+fryplot(FiresCA2017_ppp.km, main = "Gráfico de Fry")
 ```
 
-Al realizar el gráfico de Patterson se observa que todos los puntos se distribuyen homogéneamente de manera aleatoria, por ello se presume aleatoriedad completa.
+Al realizar el gráfico de Patterson Fry se observa que todos los puntos muestran una alta aglomeración de puntos alrededor del centro, por ello se presume un patrón de agregación.
 
-# Función K
+# Analisis de segundo orden para la incidencia de incendios en California en el 2017
 
+## Función K
 
+```{r}
+plot(Kest(FiresCA2017_ppp.km), main  = "K-estimada")
+```
 
+Debido a que las estimaciones estan por encima de la curva teórica, se puede pensar que se trata de un proceso de agregación.
 
+## Función F
+
+```{r}
+plot(Fest(FiresCA2017_ppp.km), main = "F-estimada")
+```
+
+Cómo las curvas estimadas estan por debajo de la curva teórica (Azul) se supone que es un patrón de agregación.
+
+## Función G
+
+```{r}
+plot(Gest(FiresCA2017_ppp.km), main = "G-estimada")
+```
+
+Como las funciones estimadas para la G están por encima de la teórica se presume que el patrón es de agración.
+
+## Función de correlación por pares
+
+```{r}
+plot(pcf(FiresCA2017_ppp.km), main = "pair-correlation estimada")
+```
+
+Debido a que las estimaciones se alejan por arriba de la teórica en distancias pequeñas se puede asumir que la hipótesis del patrón puntual es de agregación.
+
+# Test para aleatoriedad completa
+
+## Pointwise Envelopes
+
+```{r}
+K1 <- envelope(FiresCA2017_ppp.km, Kest, nsim = 39, fix.n = TRUE)
+P1 <- envelope(FiresCA2017_ppp.km, pcf, nsim = 39, fix.n = TRUE)
+F1 <- envelope(FiresCA2017_ppp.km, Fest, nsim = 39, fix.n = TRUE)
+G1 <- envelope(FiresCA2017_ppp.km, Gest, nsim = 39, fix.n = TRUE)
+```
+
+```{r}
+par(mfrow = c(2,2), no.readonly = T)
+plot(K1, main = "Envelopes usando K")
+plot(P1, main = "Envelopes usando PCF")
+plot(F1, main = "Envelopes usando F")
+plot(G1, main = "Envelopes usando G")
+```
+
+- Con el test para la aleatoriedad completa se puede concluir que el patrón se aleja por arriba de la curva teórica y además la sombra gris no contiene la curva negra que es la función K-estimada, por ello se asume que es un patrón de agregación. 
+
+- Para la función PCF-estimada a distancias cortas se sobre ajusta a la curva teórica y además las sombras grises no cubren a la función estimada a distancias pequeñas intuyendo un patrón de agregación.  
+
+- Para la función F el mecánica es al contrario, cuando la función F-estimada esta por debajo de la ajustada se supone que el patrón es de agregación.
+
+- En la función G al tener la curva estima por encima de la teórica se supone que el patrón es de agregación.
 
 
