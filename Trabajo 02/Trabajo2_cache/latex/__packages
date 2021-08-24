@@ -21,3 +21,9 @@ dplyr
 stringr
 forcats
 maps
+plot3D
+rgl
+rpanel
+splancs
+stpp
+KernSmooth
