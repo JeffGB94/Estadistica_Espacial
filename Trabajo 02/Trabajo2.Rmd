@@ -298,13 +298,13 @@ A continuación, calcularemos las distancias promedio de vecino más cercano (AN
 
 Para calcular la distancia promedio del primer vecino más cercano (en acres), se establece $k=1$:
 
-```{r}
+```{r, echo = TRUE}
 mean(nndist(FiresCA2017_ppp.km, k = 1))
 ```
 
 Para calcular el conjunto de distancia promedio del segundo vecino mas cercano, se usa:
 
-```{r}
+```{r, echo = TRUE}
 mean(nndist(FiresCA2017_ppp.km, k = 2))
 ```
 
