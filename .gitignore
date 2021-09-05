@@ -1,8 +1,8 @@
 .Rhistory
 .Rapp.history
 .RData
-*.Rproj/
+*.Rproj.user/
 *_cache/
 *_files/
 *.log
-/Trabajo2 - copia.Rmd
+*Trabajo2 - copia.Rmd
