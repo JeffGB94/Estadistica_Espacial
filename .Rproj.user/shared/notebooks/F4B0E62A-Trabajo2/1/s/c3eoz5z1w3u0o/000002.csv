@@ -1,2 +1,0 @@
-"0","Q <- quadratcount(FiresCA2017_ppp)"
-"0","plot(FiresCA2017_ppp, pch = 20, main = ""Conteo por cuadrantes"", cols = ""#00000088"")"
