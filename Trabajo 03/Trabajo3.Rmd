@@ -60,13 +60,13 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo = FALSE,
+  echo = TRUE,
   cache = TRUE,
   message = FALSE,
   error = FALSE,
   warning = FALSE,
+  tidy.opts=list(width.cutoff = 80),
   tidy = TRUE,
-  tidy.opts=list(width.cutoff = 55),
   prompt = TRUE
   )
 options(kableExtra.latex.load_packages = FALSE)
