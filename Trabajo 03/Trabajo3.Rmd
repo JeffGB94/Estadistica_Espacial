@@ -54,6 +54,7 @@ header-includes:
 output: 
     pdf_document: 
       toc: yes
+      toc_depth: 3
       number_sections: yes
 ---
 
@@ -149,4 +150,31 @@ par(mfrow=c(1,1))
 plot(NY8, border="grey60", axes=TRUE)
 plot(NY_nb, coordinates(NY8), pch=19, cex=0.6, add=TRUE)
 ```
+
+# Vecinos espaciales y peso espacial
+
+## Objetos vecinos
+
+## Objetos de ponderaciones espaciales
+
+## Manejo de objetos de ponderaciones espaciales
+
+## Uso de pesos para simular la autocorrelación espacial
+
+# Prueba de autocorrelación espacial
+
+## Pruebas globales
+
+## Pruebas locales
+
+# Ajuste de modelos de datos de área
+
+## Enfoques de estadística espacial
+
+### Modelos autorregresivos simultáneos
+
+### Modelos autorregresivos condicionales
+
+### Ajuste de modelos de regresión espacial
+
 
