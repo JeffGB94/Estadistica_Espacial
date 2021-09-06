@@ -1,0 +1,151 @@
+---
+title: |
+  \includegraphics[width=26cm]{EscudoUN.png}  
+  \thispagestyle{empty} 
+  \vspace*{2.0cm} 
+  \textbf{\huge Modelado de datos en áreas}  
+  \vspace{1cm}
+subtitle: |
+ | \LARGE Estadística espacial
+ | \vspace{4.07cm}
+author: |
+ |  \Large \textbf{Daniela Arbeláez Montoya}
+ |  \Large \textbf{Jefferson Gamboa Betancur}
+ |  \Large \textbf{Jean Paul Piedrahita García}
+ |  \vspace{5cm}
+date: |
+  | \small Universidad Nacional de Colombia
+  | Ciencias, Escuela de Estadística
+  | Medellín, Colombia
+  | 2021
+documentclass: article
+geometry: 
+  - top=2cm
+  - left=1.8cm
+  - right=2cm
+  - bottom=2.54cm
+fontsize: 12pt
+pagestyle: empty
+papersize: a4
+linestretch: 1.5
+linkcolor: blue
+links-as-notes: true
+lang: "es"
+header-includes:
+- \usepackage[utf8]{inputenc}
+- \setlength{\parindent}{0pt}
+- \usepackage{graphicx}
+- \pagenumbering{gobble}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+- \usepackage{hyperref}
+output: 
+    pdf_document: 
+      toc: yes
+      number_sections: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  cache = TRUE,
+  message = FALSE,
+  error = FALSE,
+  warning = FALSE,
+  tidy = TRUE,
+  tidy.opts=list(width.cutoff = 55),
+  prompt = TRUE
+  )
+options(kableExtra.latex.load_packages = FALSE)
+require(kableExtra)
+```
+
+```{=tex}
+\newpage
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\pagestyle{plain}
+```
+```{r, echo = FALSE}
+ITabla <- function(M){
+  kbl(M, booktabs = T) %>%
+  kable_styling(latex_options = c("striped", "hold_position"))
+}
+```
+
+
+# Introducción
+
+A lo largo del desarrollo de este documento, se mostrará la construcción de vecinos y los pesos que se pueden aplicar a los vecindarios. Una vez que este importante y a menudo exigente prerrequisito esté en su lugar, se procede a buscar formas de medir la autocorrelación espacial.
+
+Si bien las pruebas se basan en modelos de procesos espaciales, primero se examinan las pruebas y solo posteriormente se pasa al modelado. También es interesante mostrar cómo se puede introducir la autocorrelación espacial en datos independientes, de modo que se puedan realizar simulaciones.
+
+El conjunto de datos con el que se trabajará en esta ocasión, contiene 281 distritos censales para ocho condados centrales del estado de Nueva York complementado con límites de tramo. El área tiene una extensión de unos 160 km de norte a sur y de 120 km de este a oeste.
+
+```{r}
+library(rgdal)
+library(sf)
+library(spdep)
+
+NY8 <- readOGR(".", "NY8_utm18")
+TCE <- readOGR(".", "TCE")
+cities <- readOGR(".", "NY8cities")
+```
+```{r}
+par(mfrow=c(1,2))
+plot(NY8, border="grey60", axes=TRUE)
+text(coordinates(cities), labels=as.character(cities$names), font=2, cex=0.9)
+text(bbox(NY8)[1,1], bbox(NY8)[2,2], labels="a)", cex=0.8)
+plot(NY8, border="grey60", axes=TRUE)
+points(TCE, pch=1, cex=0.7)
+points(TCE, pch=3, cex=0.7)
+text(coordinates(TCE), labels=as.character(TCE$name), cex=0.7,
+ font=1, pos=c(4,1,4,1,4,4,4,2,3,4,2), offset=0.3)
+text(bbox(NY8)[1,1], bbox(NY8)[2,2], labels="b)", cex=0.8)
+```
+
+La figura $a)$ muestra las principales ciudades en el área de estudio y $b)$ la ubicación de 11 sitios de desechos peligrosos.
+```{r}
+spplot(NY8, c("PCTAGE65P"))
+spplot(NY8, c("PCTAGE65P"), col="transparent")
+```
+```{r}
+library("RColorBrewer")
+#color palette creator function
+rds <- colorRampPalette(brewer.pal(8, "RdBu"))
+#get a range for the values
+tr_at <- seq(min(NY8$PCTAGE65P), max(NY8$PCTAGE65P), length.out=20)
+#create a color interpolating function taking the required
+#number of shades as argument
+tr_rds <- rds(20)
+#parameters
+# at - at which values colors change
+# col.regions - specify fill colors 
+tr_pl <- spplot(NY8, c("PCTAGE65P"), at=tr_at, col="transparent",
+                col.regions=tr_rds, main=list(label="Age>65", cex=0.8))
+plot(tr_pl)
+
+```
+```{r}
+# reads a GAL lattice file into a neighbors list
+NY_nb <- read.gal("NY_nb.gal", region.id = row.names(NY8))
+summary(NY_nb)
+```
+```{r}
+par(mfrow=c(1,1))
+plot(NY8, border="grey60", axes=TRUE)
+plot(NY_nb, coordinates(NY8), pch=19, cex=0.6, add=TRUE)
+```
+
