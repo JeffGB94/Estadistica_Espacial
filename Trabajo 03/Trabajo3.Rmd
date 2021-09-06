@@ -99,9 +99,9 @@ library(rgdal)
 library(sf)
 library(spdep)
 
-NY8 <- readOGR(".", "NY8_utm18")
-TCE <- readOGR(".", "TCE")
-cities <- readOGR(".", "NY8cities")
+NY8 <- readOGR("Base de datos", "NY8_utm18")
+TCE <- readOGR("Base de datos", "TCE")
+cities <- readOGR("Base de datos", "NY8cities")
 ```
 ```{r}
 par(mfrow=c(1,2))
@@ -117,6 +117,7 @@ text(bbox(NY8)[1,1], bbox(NY8)[2,2], labels="b)", cex=0.8)
 ```
 
 La figura $a)$ muestra las principales ciudades en el área de estudio y $b)$ la ubicación de 11 sitios de desechos peligrosos.
+
 ```{r}
 spplot(NY8, c("PCTAGE65P"))
 spplot(NY8, c("PCTAGE65P"), col="transparent")
@@ -140,7 +141,7 @@ plot(tr_pl)
 ```
 ```{r}
 # reads a GAL lattice file into a neighbors list
-NY_nb <- read.gal("NY_nb.gal", region.id = row.names(NY8))
+NY_nb <- read.gal("Base de datos/NY_nb.gal", region.id = row.names(NY8))
 summary(NY_nb)
 ```
 ```{r}
