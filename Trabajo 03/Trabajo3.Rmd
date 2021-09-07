@@ -94,15 +94,18 @@ Si bien las pruebas se basan en modelos de procesos espaciales, primero se exami
 
 El conjunto de datos con el que se trabajará en esta ocasión, contiene 281 distritos censales para ocho condados centrales del estado de Nueva York complementado con límites de tramo. El área tiene una extensión de unos 160 km de norte a sur y de 120 km de este a oeste.
 
-```{r}
+```{r librerías}
 library(rgdal)
 library(sf)
 library(spdep)
+```
 
+````{r}
 NY8 <- readOGR("Base de datos", "NY8_utm18")
 TCE <- readOGR("Base de datos", "TCE")
 cities <- readOGR("Base de datos", "NY8cities")
 ```
+
 ```{r}
 par(mfrow=c(1,2))
 plot(NY8, border="grey60", axes=TRUE)
@@ -184,6 +187,10 @@ summary(Sy0_nb)
 
 
 ## Objetos de ponderaciones espaciales
+
+La ponderación espacial se puede ver como una lista de ponderaciones espaciales indexadas por una lista de vecinos entre \textit{i}  y  \textit{j}  esel \textit{k-ésimo} elemento del \textit{i-ésimo} componente de la lista de ponderaciones, y \textit{k} nos dice cual de los \textit{i-ésimos} valores del componente de la lista de vecinos es igual a \textit{j}. Si \textit{j} no está presente en el \textit{i-ésimo} componente de la lista de vecinos, \textit{j} no es un vecino de \textit{i}. Por ello algunas de las ponderaciones \textit{$w_{ij}$} de la matriz de ponderaciones serán cero.
+
+Una vez se tiene esta lista de conjuntos de vecinos 
 
 ```{r}
 Sy0_lw_W <- nb2listw(Sy0_nb); Sy0_lw_W
