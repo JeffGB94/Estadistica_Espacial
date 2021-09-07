@@ -190,7 +190,9 @@ summary(Sy0_nb)
 
 La ponderación espacial se puede ver como una lista de ponderaciones espaciales indexadas por una lista de vecinos entre \textit{i}  y  \textit{j}  esel \textit{k-ésimo} elemento del \textit{i-ésimo} componente de la lista de ponderaciones, y \textit{k} nos dice cual de los \textit{i-ésimos} valores del componente de la lista de vecinos es igual a \textit{j}. Si \textit{j} no está presente en el \textit{i-ésimo} componente de la lista de vecinos, \textit{j} no es un vecino de \textit{i}. Por ello algunas de las ponderaciones \textit{$w_{ij}$} de la matriz de ponderaciones serán cero.
 
-Una vez se tiene esta lista de conjuntos de vecinos 
+Una vez se establece la lista de los conjuntos de los vecinos en nuestra área de estudio, se procese a asignar los pesos espaciales, también es de tener en cuenta que se utiliza una notación bionaria cuando se sabe poco del proceso especial, dónde no hay una relación de vecino se pone 0 (cero) en caso contrario será la unidad.
+
+La función `nb2listw` toma una lista de vecinos y lo convierte en un objeto de pesos. La conversión de los pesos se hace con un estilo $W$ que se hace bajo una estandarización por fila para sumar la unidad. El método de impresión \textit{(print)} para los objetos \text{listw} muestran las características de los vecinos subyacentes, el estilo de las ponderaciones espaciales y las constantes de las ponderaciones espaciales utilizadas en el cálculo de las pruebas de auto-correlación espacial. El componente de vecinos del objeto es el objeto nb subyacente, que proporciona la indexación del componente de ponderaciones.
 
 ```{r}
 Sy0_lw_W <- nb2listw(Sy0_nb); Sy0_lw_W
@@ -200,6 +202,8 @@ names(Sy0_lw_W)
 names(attributes(Sy0_lw_W))
 ```
 
+Para el `style = "W"`,  los pesos varían entre la unidad divida por el mayor y el menor número de vecinos, y las sumas de los pesos para cada entidad de área son la unidad. Este estilo se puede interpretar como el \textbf{valor medio entre vecinos}. Los pesos de los enlaces que se originan en áreas con pocos vecinos son mayores que los que se originan en áreas con muchos vecinos, quizá aumentando las entidades de área en el borde del área de estudio sin querer. Esta representación ya no es simétrica, pero es similar tiende a ser simétrica.
+
 ```{r}
 1/rev(range(card(Sy0_lw_W$neighbours)))
 
@@ -208,12 +212,59 @@ summary(unlist(Sy0_lw_W$weights))
 summary(sapply(Sy0_lw_W$weights, sum))
 ```
 
+\textbf{Las funciones:}
+
+- `card` cuenta el número de vecinos en cada región en la lista de vecinos.
+
+- `range` toma el valor mínimo y el máximo.
+
+- `rev` revierte el vector 
+
+- `unlist` saca la información o datos atómicos de una lista
+
+- `sapply` aplica la función suma a cada uno de los vectores asociado a las áreas.
+
+La configuración de `style = "B"` - \textit{Binario} retiene un peso de unidad para cada relación de vecino, pero en este caso, las sumas de pesos de las áreas difieren según el número de áreas vecinas que tienen.
+
 ```{r}
 Sy0_lw_B <- nb2listw(Sy0_nb, style = "B")
 summary(unlist(Sy0_lw_B$weights))
 summary(sapply(Sy0_lw_B$weights, sum))
 ```
 
+El argumento `glist` se puede utilizar para pasar una lista de vectores de pesos generales correspondientes a las relaciones vecinas a `nb2list`. En este ejecicio se cree que la fuerza de las relaciones con los vecinos se atenúa con la distancia, por ello se estable en los pesos para que sean proporcionales ala distancia inversa entre los puntos que representan las áreas, usando `nbdists`para calcular las distancias para el objeto `nb` dado. Luego se usa `lapply` para invertir las distancias, obteniendo una estructura de pesos espaciales diferente a los anteriores. Si no se tiene ninguna razón para asumir más conocimiento sobre las relaciones con los vecinos que su existencia o ausencia, este paso es potencialmente engañoso. Si se sabe que el flujo de desplazamiento describen la estructura de las ponderaciones mejor que la alternativa binaria, puede valer la pena utilizarlas como ponderaciones generales; Sin embargo, puede haber problemas de simetría, porque tales flujos a diferencia de las distancias inversas, rara vez son simétricas.
+
+```{r}
+dsts <- nbdists(Sy0_nb, coordinates(Syracuse))
+idw <- lapply(dsts, function(x) 1/(x/1000))
+Sy0_lw_idwB <- nb2listw(Sy0_nb, glist = idw, style = "B")
+summary(unlist(Sy0_lw_idwB$weights))
+summary(sapply(Sy0_lw_idwB$weights, sum))
+```
+
+\textbf{La función:}
+
+- `nbdists` devuelve las distancias euclidianas dadas por un vector de enlaces de vecinos (un objeto nb). 
+
+- `nb2listw` toma una lista de vecinos y lo convierte en un objeto de pesos.
+
+- `lapply` aplica a cada distancia euclidiana el inverso.
+
+La siguiente figura muestra tres representaciones de ponderaciones espaciales para Syracuse mostradas como matrices. La imagen `style = "W"` de la izquierda es asimétrica, con colores más oscuros ue muestran pesos más gandes para áreas con pocos vecinos. Los otros dos paneles son simétricos, pero expresan diferentes suposiciones sobre las fortalezas de las relaciones con los vecinos. 
+
+![Tres representaciones de ponderaciones espaciales para Syracuse](matrices-ponderaciones.png)
+
+La función `nb2listw` permite manejar listas de vecinos con áreas sin vecinos. Esto es debido porque la representación del conjunto vacío sea cero y debería ser representado como `NA` pero esto generaría problemas más adelante.
+
+Es por esta razón que el argumento predeterminado es `cero.policy=FALSE`, lo que genera un error cuando se proporciona un argumento `nb` con áreas sin vecinos. Con el argumento `TRUE`permite la creación del objeto de ponderaciones espaciales, con ponderaciones cero. 
+
+```{r}
+Sy0_lw_D1 <- nb2listw(Sy0_nb, style = "B")
+Sy0_lw_D1 <- nb2listw(Sy0_nb, style = "B", zero.policy = TRUE)
+print(Sy0_lw_D1, zero.policy = TRUE)
+```
+
+Un problema paralelo de los conjuntos de datos con valores perdidos en las variables pero con ponderaciones espaciales especificadas se aborda mediante el método `subset.listw`, que vuelve a generar las ponderaciones para el subconjunto de áreas dado, por ejemplo, dado por `complete.cases`. Sabiendo qué observaciones están incompletas, los vecinos subyacentes y las ponderaciones se pueden subdividir en algunos casos, con el objetivo de evitar la propagación de los valores `NA` al calcular los valores con retraso espacial. Muchas pruebas y funciones de ajuste de modelos pueden llevar a cabo esto internamente si se establece el indicador de argumento apropiado, aunque el analista cuidadoso preferirá subconjuntos de los datos de entrada y los pesos antes de probar o modelar.
 
 ## Manejo de objetos de ponderaciones espaciales
 
