@@ -86,7 +86,6 @@ ITabla <- function(M){
 }
 ```
 
-
 # Introducción
 
 A lo largo del desarrollo de este documento, se mostrará la construcción de vecinos y los pesos que se pueden aplicar a los vecindarios. Una vez que este importante y a menudo exigente prerrequisito esté en su lugar, se procede a buscar formas de medir la autocorrelación espacial.
@@ -140,22 +139,74 @@ tr_pl <- spplot(NY8, c("PCTAGE65P"), at=tr_at, col="transparent",
 plot(tr_pl)
 
 ```
+
+# Vecinos espaciales y peso espacial
+
+La creación de ponderaciones espaciales es un paso necesario en el uso de datos de área, quizás solo para verificar que no haya patrones espaciales restantes en los residuos. El primer paso es definir a qué relaciones entre observaciones se les dará un peso distinto de cero, es decir, elegir el criterio de vecino que se usará; el segundo es asignar pesos a los enlaces vecinos identificados.
+
+Tratar de detectar patrones en mapas de residuos visualmente no es una opción aceptable, por lo que se incluyen un montón de funciones en el paquete **spdep** para ayudar.
+
+Las viñetas **"nb","CO69" ** y **"sids"** en **spdep** incluyen discusiones sobre la creación y el uso de ponderaciones espaciales, y se pueden acceder a ellas de la siguiente manera:
+
+```{r}
+vignette("nb",package = "spdep")
+```
+
+## Objetos vecinos
+
+En el paquete spdep, las relaciones vecinas entre **n** observaciones están representadas por un objeto de clase **nb**. Es una lista de longitud n con los números de índice de vecinos de cada componente registrados como un vector entero. Si alguna observación no tiene vecinos, el componente contiene un número entero cero. También contiene atributos, típicamente un vector de identificadores de región de caracteres y un valor lógico que indica si las relaciones son simétricas. Los identificadores de región pueden usarse para verificar la integridad entre los datos mismos y el objeto vecino.
+
+La función auxiliar **card** devuelve la cardinalidad del conjunto de vecinos para cada objeto, es decir, el número de vecinos.
+
 ```{r}
 # reads a GAL lattice file into a neighbors list
 NY_nb <- read.gal("Base de datos/NY_nb.gal", region.id = row.names(NY8))
 summary(NY_nb)
 ```
+
 ```{r}
 par(mfrow=c(1,1))
 plot(NY8, border="grey60", axes=TRUE)
 plot(NY_nb, coordinates(NY8), pch=19, cex=0.6, add=TRUE)
 ```
 
-# Vecinos espaciales y peso espacial
+La figura muestra el gráfico vecino completo para el área de estudio de ocho condados.
 
-## Objetos vecinos
+Como ahora se tiene un objeto nb para examinar, se pueden presentar los métodos estándar para estos objetos. Hay métodos  de impresión, resumen, diagrama y otros; el método de resumen presenta una tabla de la distribución del número de enlace, y tanto el método de impresión como el de resumen informan de la asimetría y la presencia de observaciones sin vecinos; la asimetría está presente cuando $i$ es un vecino de $j$ pero $j$ no es un vecino de $i$.
+
+Con motivos de simplicidad al mostrar como crear objetos vecinos, se trabaja con un subconjunto del mapa que consta de los censos dentro de Syracuse, aunque los mismos principios se aplican al conjunto de datos completo. 
+
+```{r}
+Syracuse <- NY8[NY8$AREANAME == "Syracuse city",]
+Sy0_nb <- subset(NY_nb, NY8$AREANAME == "Syracuse city")
+summary(Sy0_nb)
+```
+
 
 ## Objetos de ponderaciones espaciales
+
+```{r}
+Sy0_lw_W <- nb2listw(Sy0_nb); Sy0_lw_W
+
+names(Sy0_lw_W)
+
+names(attributes(Sy0_lw_W))
+```
+
+```{r}
+1/rev(range(card(Sy0_lw_W$neighbours)))
+
+summary(unlist(Sy0_lw_W$weights))
+
+summary(sapply(Sy0_lw_W$weights, sum))
+```
+
+```{r}
+Sy0_lw_B <- nb2listw(Sy0_nb, style = "B")
+summary(unlist(Sy0_lw_B$weights))
+summary(sapply(Sy0_lw_B$weights, sum))
+```
+
 
 ## Manejo de objetos de ponderaciones espaciales
 
