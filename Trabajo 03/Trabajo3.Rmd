@@ -292,13 +292,20 @@ Sy14_nb <- read.gal("Base de datos/Sy_GeoDa1.GAL")
 isTRUE(all.equal(Sy0_nb, Sy14_nb, check.attributes = FALSE))
 ```
 
-La función `write.nb.ga` se utiliza para escribir archivos en formato `GAL` a partir de `nb` objetos.
+La función `write.nb.gal` se utiliza para escribir archivos en formato `GAL` a partir de `nb` objetos. GeoDa  también  crea  archivos  en  formato  `GWT`,  descritos  en  la  documentación  de  GeoDa  y el  archivo  de  ayuda,  que  también  contienen  información  de  distancia  para  el  enlace  entre  las áreas, y se almacenan en una representación dispersa de tres columnas. Se pueden leer usando `read.gwt2nb`, aquí para un esquema de cuatro vecinos más cercanos, y solo usando los enlaces de vecinos.
 
 ```{r}
 Sy16_nb <- read.gwt2nb("Base de datos/Sy_GeoDa4.GWT")
 isTRUE(all.equal(Sy10_nb, Sy16_nb, check.attributes = FALSE))
 ```
- 
+
+Un conjunto similar de funciones está disponible para intercambiar pesos espaciales con la Biblioteca de Econometrics Espacial. La representación dispersa de pesos es similar al formato `GWT` y se puede importar usando `read.dat2listw.`
+
+La exportación a tres formatos diferentes pasa por la función `listw2sn`, que convierte un objeto de pesos espaciales en una representación dispersa de tres columnas. El marco de datos de salida se puede escribir como un archivo en formato `GWT` con `write.sn2gwt` o como una representación de texto de una matriz dispersa para Matlab™ con `write.sn2dat`. Los archivos escritos con `write.sn2gwt` se pueden leer en Stata™ con `spmat import W using`. Existe una función llamada `listw2WB` para crear una lista de pesos espaciales para `WinBUGS`, que se escribirá en un archivo usando  `dput`. Para objetos vecinos, se puede usar `nb2WB`, estableciendo todos los pesos a la unidad. De manera similar, un objeto vecino se puede exportar a un archivo con `nb2INLA`, para pasar datos al argumento del \textbf{gráfico} para el modelo `"bym"` en el ajuste usando `inla`. También es posible utilizar `nb2gra` en el paquete `BayesX` para convertir `nb` objetos al formato gráfico `gra`.
+
+El `mat2listw` se puede utilizar para revertir el proceso, cuando una matriz de ponderaciones se ha leído en `R` y necesita convertirse en un vecino y un objeto de lista de ponderaciones. Desafortunadamente, esta función no establece el estilo del objeto `listw` a un valor conocido, utilizando `M` para señalar esta falta de conocimiento. Entonces es habitual reconstruir el objeto `listw`, tratando el componente de vecinos como un objeto `nb`, el componente de pesos como una lista de pesos generales y estableciendo el estilo en la función `nb2listw` directamente. Se utilizó para la importación inicial de las contigüidades de ocho condados, como se muestra en detalle en la página de ayuda `NY_data` proporcionada con `spdep`.
+
+Finalmente, existe una función `nb2lines` para convertir listas de vecinos en objetos `SpatialLinesDataFrame`, dadas las coordenadas de los puntos que representan las áreas. Esto permite trazar objetos vecinos de una manera alternativa y, si es necesario, exportarlos como `shapefiles`.
 
 ## Uso de pesos para simular la autocorrelación espacial
 
@@ -362,8 +369,50 @@ moran_t1 <- lm.morantest(lm(trend_x ~ et), listw=Sy0_lw_W)
 ```
 
 Esto demuestra lo importante que puede ser entender que las pruebas de autocorrelación espacial también pueden reaccionar a un modelo mal especificado de la media, y que la omisión de una variable espacialmente modelada de la función media 'parecerá' como autocorrelación espacial a las pruebas.
-
+ 
 ## Pruebas globales
+Quizá la prueba global mas común es `moran.test`y por esta razón se continuará usandola. Otras pruebas globales implementadas en el paquete `spdep` incluyen la $C$ de Geary (`geary.test()`), la $G$ global de GetisOrd (`gobalG.test()`) y la prueba de Mantel de producto cruzado general espacial, que incluye la $I$ de Moran, la $C$ de Geary y la variante Sokal de la C de Geary como formas alternativas (`sp.mantel.mc()`).
+
+Todos estos test son para variables continuas, con `moran.test()` que tiene un argumento para usar un ajuste para una variable continua clasificada.
+
+También  hay pruebas de recuento de combinaciones para variables categóricas, con la variable de interés representada como un factor: `joincount.test()` para combinaciones del mismo color, `joincount.multi()` para combinaciones del mismo y de diferente color.
+ 
+El resultado de los test es una desviación estándar que se compara con la distribción Normal para encontrar el valor de probabilidad del estadístico observado bajo la hiótesis nula $H_0$ de no dependencia espacial para los pesos espaciales elegidos; la mayoria de veces la prueba es unilateral, con la hipótesis alternativa $H_1$ de que el estadístico observado es significativamente mayor que su valor esperado.
+
+
+```{r}
+moran.test(NY8$Cases, listw=nb2listw(NY_nb))
+lw_B <- nb2listw(NY_nb, style="B")
+
+moran.test(NY8$Cases, listw=lw_B)
+moran.test(NY8$Cases, listw=lw_B, randomisation=FALSE)
+
+lm.morantest(lm(Cases ~ 1, NY8), listw=lw_B)
+lm.morantest.sad(lm(Cases ~ 1, NY8), listw=lw_B)
+lm.morantest.exact(lm(Cases ~ 1, NY8), listw=lw_B)
+
+# Monte Carlo test
+set.seed(1234)
+bperm <- moran.mc(NY8$Cases, listw=lw_B, nsim=999)
+bperm
+
+r <- sum(NY8$Cases)/sum(NY8$POP8)
+rni <- r*NY8$POP8
+CR <- function(var, mle) rpois(length(var), lambda=mle)
+MoranI.pboot <- function(var, i, listw, n, S0, ...) {
+  return(moran(x=var, listw=listw, n=n, S0=S0)$I)
+}
+
+set.seed(1234)
+
+library(boot)
+
+boot2 <- boot(NY8$Cases, statistic=MoranI.pboot, R=999, sim="parametric",
+  ran.gen=CR, listw=lw_B, n=length(NY8$Cases), S0=Szero(lw_B), mle=rni)
+
+pnorm((boot2$t0 - mean(boot2$t))/sd(boot2$t[,1]), lower.tail=FALSE)
+
+```
 
 ## Pruebas locales
 
