@@ -185,6 +185,9 @@ Sy0_nb <- subset(NY_nb, NY8$AREANAME == "Syracuse city")
 summary(Sy0_nb)
 ```
 
+Se crean varios objetos vecinos de otras maneras para usarlos mas adelante.Tres son k objetos vecinos mas cercanos, tomando k puntos mas cercanos como vecinos (k=1,2 y 4 en este caso); esto se adapta a lo largo del área de estudio, teniendo en cuenta las diferencias en las densidades de área.
+Naturalmente, en la mayoría de los casos,esto conduce a vecinos asimétricos, pero asegurará que todas las áreas tengan **k** vecinos.
+
 ```{r}
 coords <- coordinates(Syracuse)
 IDs <- row.names(Syracuse)
@@ -196,6 +199,7 @@ Sy11_nb <- dnearneigh(coords, d1 = 0, d2 = 0.75 * max(dsts),
                       row.names = IDs)
 ```
 
+El objeto k= también es útil para encontrar la distancia mínima a la que todas las áreas tienen un vecino basado en la distancia. Usando la función $nbdist$, se puede calcular una lista de vectores de distancias correspondientes al objeto vecino. El mayor valor será la distancia mínima necesaria para asegurarse de que todas las áreas estén vinculadas al menos a un vecino, por lo que se puede crear fácilmente un objeto con observaciones sin vecino estableciendo el umbral superior por debajo de este valor.
 
 ## Objetos de ponderaciones espaciales
 
@@ -294,11 +298,70 @@ La función `write.nb.ga` se utiliza para escribir archivos en formato `GAL` a p
 Sy16_nb <- read.gwt2nb("Base de datos/Sy_GeoDa4.GWT")
 isTRUE(all.equal(Sy10_nb, Sy16_nb, check.attributes = FALSE))
 ```
-
+ 
 
 ## Uso de pesos para simular la autocorrelación espacial
 
-# Prueba de autocorrelación espacial
+```{r}
+set.seed(987654)
+n <- length(Sy0_nb)
+uncorr_x <- rnorm(n)
+rho <- 0.5
+autocorr_x <- invIrW(Sy0_lw_W, rho) %*% uncorr_x
+```
+
+
+# Prueba de autocorrelación espacial 
+
+Ahora que se tiene variedad de formas de construir pesos espaciales, se puede comenzar a usarlos para probar la presencia de autocorrelación espacial. Antes de comenzar, es muy útil revisar las suposiciones que se hacen en las pruebas; se usará la $I$ de Moran como ejemplo, pero las consecuencias también se aplican a otras pruebas.
+
+Las pruebas suponen que el modelo medio de los datos elimina los patrones espaciales sistemáticos de los datos.Este error de especificación del modelo medio no es en absoluto infrecuente y puede ser inevitable cuando no se dispone de observaciones sobre las variables necesarias para especificarlo correctamente.
+
+Otro problema que puede surgir es que los pesos espaciales que usamos para las pruebas no son los que generaron la autocorrelación. Esto es un reflejo de la especificación incorrecta del modelo de la varianza de los residuos del modelo medio, que también puede incluir hacer supuestos de distribución que no son apropiados para los datos, por ejemplo, asumiendo homocedasticidad o parámetros de forma regular (asimetría y curtosis). Algunos de estos pueden abordarse transformando los datos y utilizando la estimación ponderada, pero en cualquier caso, se necesita cuidado al interpretar la autocorrelación espacial aparente que en realidad puede provenir de una especificación incorrecta.
+
+Dado que se sabe que la variable simulada anteriormente, se extrae al azar de la distribución normal, se puede manipular para ver qué sucede con los resultados de las pruebas en diferentes condiciones. La prueba $I$ de Moran , se calcula entonces como la razón del producto de la variable de interés y su rezago espacial, con el producto cruzado de la variable de interés y se ajusta a los pesos espaciales utilizados:
+
+
+$$I = \cfrac{n}{\sum_{i=1}^{n} \sum_{j=1}^{n} \omega_{ij}} \cfrac{\sum_{i=1}^{n} \sum_{j=1}^{n} \omega_{ij} \left(y_i - \overline{y}\right)\left(y_j - \overline{y}\right)}{\sum_{i=1}^{n}\left(y_i-\overline{y}\right)^2},$$
+
+donde $y_i$ es la i-ésima observación, $\overline{y}$ es la media de la variable de interés y $w_{ij}$ es el peso espacial del vínculo entre i y j.
+
+Los resultados del test para cinco configuraciones, se recopilan a continuación; la primera columna contiene el valor observado de $I$, la segunda es el valor esperado (la cual es $-1/(n-1)$ para casos de media centrada), la tercera es la varianza del
+estadístico bajo aleatorización, a continuación la desviación estándar y finalmente, el valor-p de la prueba para la alternativa $I>E(I)$.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+ &
+  \multicolumn{1}{l}{$I$} &
+  \multicolumn{1}{l}{$E(I)$} &
+  \multicolumn{1}{l}{$var(I)$} &
+  \multicolumn{1}{l}{\textit{St. deviate}} &
+  \multicolumn{1}{l}{$p-value$} \\ \midrule
+uncorr\_x            & -0.03329 & -0.01613 & 0.00571 & -0.227 & 0.59    \\
+autocorr\_x          & 0.2182   & -0.0161  & 0.0057  & 3.1    & 0.00096 \\
+autocorr\_x k=1      & 0.1921   & -0.0161  & 0.0125  & 1.86   & 0.031   \\
+trend\_x             & 0.23747  & -0.01613 & 0.00575 & 3.34   & 0.00041 \\
+lm(trend\_x ~ et) & -0.0538  & -0.0309  & 0.0054  & -0.312 & 0.62    \\ \bottomrule
+\end{tabular}
+\end{table}
+
+```{r}
+moran.test(uncorr_x, listw=Sy0_lw_W)
+moran.test(autocorr_x, listw=Sy0_lw_W)
+moran.test(autocorr_x, listw=nb2listw(Sy9_nb, style="W"))
+```
+
+```{r}
+et <- coords[,1] - min(coords[,1])
+trend_x <- uncorr_x + 0.00025 * et
+moran_t <- moran.test(trend_x, listw=Sy0_lw_W)
+moran_t1 <- lm.morantest(lm(trend_x ~ et), listw=Sy0_lw_W)
+
+```
+
+Esto demuestra lo importante que puede ser entender que las pruebas de autocorrelación espacial también pueden reaccionar a un modelo mal especificado de la media, y que la omisión de una variable espacialmente modelada de la función media 'parecerá' como autocorrelación espacial a las pruebas.
 
 ## Pruebas globales
 
