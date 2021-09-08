@@ -309,6 +309,12 @@ Finalmente, existe una función `nb2lines` para convertir listas de vecinos en o
 
 ## Uso de pesos para simular la autocorrelación espacial
 
+En la siguiente figura se utilizó `listw2mat`para convertir un objeto de pesos espaciles en una matriz densa para su visualización. La misma función se utiliza para contruir una representación densada de l amatriz $(I-\rho \omega)$ para simular la autocorrelación espacial dentro de la función `invlrW`, donde $W$ es una matriz de ponderaciones, $\rho$ es un coeficiente de autocorrelación espacial e $I$ es la matriz de identidad. Este enfoque no impone condiciones estrictas para invertir las matrices a no ser de que sea una matriz singular, y sólo se aplica a simulaciones de un proceso autoregresivo simultáneo.
+
+![Simulación de la autocorrelación espacial: gráficos de retardo espacial, que muestran una línea más suave ponderada localmente](Fig 9.4)
+
+Para la simulación se utilizó un vector de número aleatorios iguales al número de secciones censales en Siracusa, usando las ponderaciones de contigüidad estandarizadas por filas para introducir la autocorrelación.
+
 ```{r}
 set.seed(987654)
 n <- length(Sy0_nb)
@@ -317,6 +323,11 @@ rho <- 0.5
 autocorr_x <- invIrW(Sy0_lw_W, rho) %*% uncorr_x
 ```
 
+El resultado que se muestra en la figura anterior, muestra el retardo espacial de la variable original no correlacionada versus con la variable aleatoria autocorrelacionada, donde ahora tiene una relación positiva entre los valores del tramo y el retardo espacial.
+
+El método de retraso para objetos `listw` crea valores de "retraso espacial": $lag(y_i) = \sum_{j\in N_{i}} \omega_{ij}y_j$ para valores observados $y_i$; $N_i$ es el conjunto de vecinos de $i$. Si el estilo del objeto de ponderaciones es la estandarización de filas, los valores de $lag(y_i)$ serán promedios sobre los conjuntos de vecinos para cada $i$, más bien como una ventana móvil definida por $N_i$ e incluyendo valores ponderados por $\omega_{ij}$.
+
+Para el análisis de datos de un área depende de manera crucial la construcción de los pesos espaciales, por ello se ha tomado el tiempo para describir las opciones que enfrenta el investigador. Ahora se procederá a modelar y probar la autocorrelación espacial utilizando supuestos sobre los procesos espaciales subyacentes. 
 
 # Prueba de autocorrelación espacial 
 
