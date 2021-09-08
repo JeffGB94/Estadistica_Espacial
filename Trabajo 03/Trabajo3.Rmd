@@ -185,6 +185,17 @@ Sy0_nb <- subset(NY_nb, NY8$AREANAME == "Syracuse city")
 summary(Sy0_nb)
 ```
 
+```{r}
+coords <- coordinates(Syracuse)
+IDs <- row.names(Syracuse)
+Sy8_nb <- knn2nb(knearneigh(coords, k = 1), row.names = IDs)
+Sy9_nb <- knn2nb(knearneigh(coords, k = 2), row.names = IDs)
+Sy10_nb <- knn2nb(knearneigh(coords, k = 4), row.names = IDs)
+dsts <- unlist(nbdists(Sy8_nb, coords))
+Sy11_nb <- dnearneigh(coords, d1 = 0, d2 = 0.75 * max(dsts), 
+                      row.names = IDs)
+```
+
 
 ## Objetos de ponderaciones espaciales
 
@@ -258,15 +269,32 @@ La función `nb2listw` permite manejar listas de vecinos con áreas sin vecinos.
 
 Es por esta razón que el argumento predeterminado es `cero.policy=FALSE`, lo que genera un error cuando se proporciona un argumento `nb` con áreas sin vecinos. Con el argumento `TRUE`permite la creación del objeto de ponderaciones espaciales, con ponderaciones cero. 
 
-```{r}
-Sy0_lw_D1 <- nb2listw(Sy0_nb, style = "B")
-Sy0_lw_D1 <- nb2listw(Sy0_nb, style = "B", zero.policy = TRUE)
+```{r, error=TRUE}
+Sy0_lw_D1 <- nb2listw(Sy11_nb, style = "B")
+Sy0_lw_D1 <- nb2listw(Sy11_nb, style = "B", zero.policy = TRUE)
 print(Sy0_lw_D1, zero.policy = TRUE)
 ```
 
 Un problema paralelo de los conjuntos de datos con valores perdidos en las variables pero con ponderaciones espaciales especificadas se aborda mediante el método `subset.listw`, que vuelve a generar las ponderaciones para el subconjunto de áreas dado, por ejemplo, dado por `complete.cases`. Sabiendo qué observaciones están incompletas, los vecinos subyacentes y las ponderaciones se pueden subdividir en algunos casos, con el objetivo de evitar la propagación de los valores `NA` al calcular los valores con retraso espacial. Muchas pruebas y funciones de ajuste de modelos pueden llevar a cabo esto internamente si se establece el indicador de argumento apropiado, aunque el analista cuidadoso preferirá subconjuntos de los datos de entrada y los pesos antes de probar o modelar.
 
 ## Manejo de objetos de ponderaciones espaciales
+
+Hay varios paquetes contribuidos que brindan soporte para matrices dispersas, entre las cuales `Matrix` es un paquete recomendado. La envoltura `as_dgRMatrix_listw` convierte un objeto `listw` en  la  matriz  dispersa  de  formato  orientado  a  filas  comprimidas  ordenadas  por  `Matrix`,  como un objeto `dgRMatrix`, una subclase de la clase virtual `RsparseMatrix`. Es más fácil hacer una matriz dispersa orientada a filas a partir de un objeto de ponderaciones espaciales, ya que las ponderaciones están orientadas a filas. Una función que se usa mucho dentro de las funciones de prueba y ajuste de modelos es `listw2U`, que devuelve un objeto `listw` simétrico que representa la matriz de ponderaciones espaciales $\frac{1}{2}(W+W^T)$
+
+Los objetos vecinos y de pesos pueden ser producidos en otros software e importarse a R y además se pueden exportar sin dificultad. Como ejemplo se han generado algunos archivos de [GeoDa](https://sgsup.asu.edu/geodacenter-redirect) a partir de distritos censales de Syracuse escritos como un shapefile, con el centroide utilizando aquí almacenado en el marco de datos. Los dos primeros son para vecinos de contigüidad. Estos archivos denomidos en formato GAL contienen solo información de vecinos y se describen en detalle en el archivo de ayuda que acompaña a la función `read.gal` 
+
+```{r}
+Sy14_nb <- read.gal("Base de datos/Sy_GeoDa1.GAL")
+isTRUE(all.equal(Sy0_nb, Sy14_nb, check.attributes = FALSE))
+```
+
+La función `write.nb.ga` se utiliza para escribir archivos en formato `GAL` a partir de `nb` objetos.
+
+```{r}
+Sy16_nb <- read.gwt2nb("Base de datos/Sy_GeoDa4.GWT")
+isTRUE(all.equal(Sy10_nb, Sy16_nb, check.attributes = FALSE))
+```
+
 
 ## Uso de pesos para simular la autocorrelación espacial
 
