@@ -382,30 +382,58 @@ Esto demuestra lo importante que puede ser entender que las pruebas de autocorre
 
 ## Pruebas globales
 
-Quizá la prueba global mas común es `moran.test`y por esta razón se continuará usandola. Otras pruebas globales implementadas en el paquete `spdep` incluyen la $C$ de Geary (`geary.test()`), la $G$ global de GetisOrd (`gobalG.test()`) y la prueba de Mantel de producto cruzado general espacial, que incluye la $I$ de Moran, la $C$ de Geary y la variante Sokal de la C de Geary como formas alternativas (`sp.mantel.mc()`).
+Quizá la prueba global mas común es `moran.test`y por esta razón se continuará usandola. Otras pruebas globales implementadas en el paquete `spdep` incluyen la $C$ de Geary (`geary.test`), la $G$ global de GetisOrd (`gobalG.test`) y la prueba de Mantel de producto cruzado general espacial, que incluye la $I$ de Moran, la $C$ de Geary y la variante Sokal de la C de Geary como formas alternativas (`sp.mantel.mc`).
 
 Todos estos test son para variables continuas, con `moran.test()` que tiene un argumento para usar un ajuste para una variable continua clasificada.
 
 También hay pruebas de recuento de combinaciones para variables categóricas, con la variable de interés representada como un factor: `joincount.test()` para combinaciones del mismo color, `joincount.multi()` para combinaciones del mismo y de diferente color.
 
-El resultado de los test es una desviación estándar que se compara con la districión Normal para encontrar el valor de probabilidad del estadístico observado bajo la hipótesis nula $H_0$ de no dependencia espacial para los pesos espaciales elegidos; la mayoria de veces la prueba es unilateral, con la hipótesis alternativa $H_1$ de que el estadístico observado es significativamente mayor que su valor esperado.
+El resultado de los test es una desviación estándar que se compara con la distribución Normal para encontrar el valor de probabilidad del estadístico observado bajo la hipótesis nula $H_0$ de no dependencia espacial para los pesos espaciales elegidos; la mayoría de veces la prueba es unilateral, con la hipótesis alternativa $H_1$ de que el estadístico observado es significativamente mayor que su valor esperado.
+
+**¿Cómo proceder si algunas entidades del área no tienen vecinos?** De forma predeterminada, las funciones de prueba en `spdep` no aceptan ponderaciones espaciales con entidades sin vecinos a menos que el argumento `zero.policy` se establezca como **TRUE**.
 
 ```{r}
 moran.test(NY8$Cases, listw=nb2listw(NY_nb))
-lw_B <- nb2listw(NY_nb, style="B")
 
+```
+
+El test anterior se realiza para probar autocorrelacion del número de casos de Leucemia por tramo censal, utilizando el estilo de ponderación espacial predeterminado de la estandarización de filas, y utilizando la hipótesis de aleatorización analítica para calcular la varianza de la estadística. El resultado, como se observa, es que el patrón espacial de la variable de interés es significativo.
+
+Si añadimos el parámetro `style="B"` para hacer que todos los pesos sean iguales, se observa que el valor de la probabilidad resultante se reduce al rededor de 20 veces. Además, se sabe que por defecto `moran.test` asume aleatorización introduciendo un término de corrección basado en la curtosis de la variable de interés.
+
+Cuando el valor de curtosis corresponde al de una variable normalmente distribuida, las dos hipótesis dan la misma varianza. En este caso hay una pequeña diferencia, pero ambas pruebas arrojan resultados similares.
+
+```{r}
+lw_B <- nb2listw(NY_nb, style="B")
 moran.test(NY8$Cases, listw=lw_B)
 moran.test(NY8$Cases, listw=lw_B, randomisation=FALSE)
+```
 
+Es útil mostrar aquí que la prueba estándar en condiciones de normalidad es, de hecho la misma prueba de Moran para los residuos de regresión del modelo que incluye solo el intercepto.
+
+```{r}
 lm.morantest(lm(Cases ~ 1, NY8), listw=lw_B)
+```
+
+Usando la misma construcción, también podemos usar la aproximación de Saddlepoint en lugar de la suposición analítica normal, y una prueba exacta, ya que estos métodos son mucho más exigentes desde el punto de vista informático.
+
+```{r}
 lm.morantest.sad(lm(Cases ~ 1, NY8), listw=lw_B)
 lm.morantest.exact(lm(Cases ~ 1, NY8), listw=lw_B)
+```
 
+También podemos utilizar una prueba de Monte Carlo, una prueba Bootstrap de permutación, en la que los valores observados se asignan aleatoriamente a tractos y la estadística de interés calcula los tiempos `nsim`. Dado que, en el caso global en contraste con el local, tenemos suficientes observaciones y podemos repetir esta permutación potencialmente muchas veces sin repetición.
+
+```{r}
 # Monte Carlo test
 set.seed(1234)
 bperm <- moran.mc(NY8$Cases, listw=lw_B, nsim=999)
 bperm
+```
 
+También se incluye una evaluación de la importancia de la autocorrelación en los recuentos de casos. La tasa global constante r se calcula primero y se utiliza para crear recuentos esperados para cada tramo censal multiplicando por la población.
+
+```{r}
 r <- sum(NY8$Cases)/sum(NY8$POP8)
 rni <- r*NY8$POP8
 CR <- function(var, mle) rpois(length(var), lambda=mle)
@@ -423,6 +451,48 @@ boot2 <- boot(NY8$Cases, statistic=MoranI.pboot, R=999, sim="parametric",
 pnorm((boot2$t0 - mean(boot2$t))/sd(boot2$t[,1]), lower.tail=FALSE)
 
 ```
+
+```{r echo=FALSE}
+oopar <- par(mfrow=c(1,2))
+xlim <- range(c(bperm$res, boot2$t[,1]))
+hist(bperm$res[-length(bperm$res)], main="Permutation bootstrap", xlab=expression(I[std]), xlim=xlim, density=15, angle=45, ylim=c(0,260))
+abline(v=bperm$statistic, lty=2)
+hist(boot2$t, col=rgb(0.4,0.4,0.4), main="Parametric bootstrap", xlab=expression(I[CR]), xlim=xlim, ylim=c(0,260))
+hist(bperm$res[-length(bperm$res)], density=15, angle=45, add=TRUE)
+abline(v=boot2$t0, lty=2)
+par(oopar)
+```
+
+Histogramas de valores simulados de la I de Moran con permutaciones aleatorias de los datos y simulaciones paramétricas desplazando la distribución de la I de Moran hacia la derecha, porque está tomando en cuenta el impacto de las poblaciones heterogéneas de la zona; el valor observado de la I de Moran está marcado por una línea vertical.
+
+```{r}
+rni <- fitted(glm(Cases ~ 1 + offset(log(POP8)), data=NY8, family="poisson"))
+```
+
+Estos recuentos esperados $rni$ se transmiten al argumento lambda a rpois para generar los conjuntos de datos sintéticos mediante el muestreo de la distribución de Poisson. El valor de la probabilidad de salida se calcula a partir del mismo I de Moran observado menos la media de los valores I simulados y se divide por su desviación estándar.
+
+Existe una versión de la I de Moran adaptada para usar una tasa empírica de Bayes que también utiliza métodos de Monte Carlo para la inferencia.
+
+```{r}
+set.seed(1234)
+EBImoran.mc(n=NY8$Cases, x=NY8$POP8, listw=nb2listw(NY_nb, style="B"), nsim=999)
+```
+
+Los resultados de las tasas empíricas de Bayes sugieren que una razón de la falta de significación del bootstrapping paramétrico del riesgo constante observado y los valores esperados podría ser que se observaron valores inusuales y extremos en áreas con poblaciones pequeñas. Una vez que se han suavizado las tasas, se encuentra cierta autocorrelación global.
+
+```{r}
+cor8 <- sp.correlogram(neighbours=NY_nb, var=NY8$Cases, order=8, method="I", style="C")
+
+library(pgirmess)
+corD <- correlog(coordinates(NY8), NY8$Cases, method="Moran")
+
+oopar <- par(mfrow=c(1,2))
+plot(cor8, main="Contiguity lag orders")
+plot(corD, main="Distance bands")
+par(oopar)
+```
+
+El panel derecho de la figura presenta la salida de la función `correlog` en el paquete `pgirmess` La función selecciona automáticamente bandas de distancia de casi 10 km, que abarcan toda el área de estudio. En este caso, las dos primeras bandas de 0 a 10 y 10 a 20 km tienen valores significativos.
 
 ## Pruebas locales
 
@@ -500,10 +570,77 @@ Finalmente, hacemos zoom para examinar los valores de probabilidad $I_i$ de Mora
 
 # Ajuste de modelos de datos de área
 
+En esta sección, se muestra cómo se puede modelar la estructura espacial en dependencia entre observaciones, en particular para datos de área, pero cuando sea necesario también utilizando representaciones alternativas.
+
+Los problemas a los que nos enfrentamos cuando intentamos ajustar modelos en presencia de autocorrelación espacial son desafiantes, sobre todo porque la autocorrelación espacial que parece que hemos encontrado puede provenir de la especificación incorrecta del modelo. Si este es el caso, el esfuerzo invertido en modelar la estructura espacial se utilizaría mejor para mejorar el modelo en sí, tal vez manejando la heterocedasticidad, agregando una covariable faltante, revisando la forma funcional de las covariables incluidas o reconsiderando la representación distributiva de la variable de respuesta.
+
 ## Enfoques de estadística espacial
+
+En muchos casos, es común suponer que las observaciones son independientes y están distribuidas de manera idéntica, pero este puede no ser el caso cuando se trabaja con datos espaciales. Las observaciones no son independientes porque puede existir alguna correlación entre áreas vecinas. También puede ser difícil distinguir el impacto de la autocorrelación espacial y las diferencias espaciales en la distribución de la observación.
+
+Desde un punto de vista estadístico, es posible dar cuenta de las observaciones correlacionadas considerando una estructura del siguiente tipo en el modelo. Si el vector de variables de respuesta es normal multivariante, podemos expresar el modelo de la siguiente manera:
+
+$$Y=\mu+e$$
+
+donde $\mu$ es el vector de medias de área, que se puede modelar de diferentes maneras y $e$ es el vector de errores aleatorios, que asumimos normalmente se distribuye con media cero y varianza genérica V.
+
+Para el caso de variables no normales, podríamos transformar los datos originales para lograr la Normalidad deseada. Por lo tanto, las técnicas que se describen a continuación aún se pueden aplicar a los datos transformados. Nos centramos en dos enfoques que se utilizan habitualmente en la práctica, como los modelos SAR (Autoregresivo simultáneo) y CAR (Autoregresivo condicionalmente).
+
+Anteriormente en este capítulo, tomamos la media de los recuentos de casos de leucemia por zona como nuestro mejor entendimiento del proceso de generación de datos, complementando esto con el enfoque de riesgo constante para tratar de manejar la heterogeneidad proveniente de variaciones en las poblaciones de las zonas. Una de las alternativas examinadas por Waller y Gotway (2004, p. 348) es tomar una transformación logarítmica de la tasa:
+
+$$z_i= log\cfrac{1000(Y_i+1)}{n_i} $$
+
+Como covariables, hemos utilizado la distancia inversa al TCE más cercano (PEXPOSURE), la proporción de personas de 65 años o más (PCTAGE65P) y la proporción de personas que poseen su propia casa (PCTOWNHOME). Para preparar el escenario, comencemos con un modelo lineal de la relación entre las proporciones de incidencia transformadas y las covariables.
+
+```{r}
+nylm <- lm(Z~PEXPOSURE+PCTAGE65P+PCTOWNHOME, data=NY8)
+summary(nylm)
+NY8$lmresid <- residuals(nylm)
+```
+
+Mas adelante en un gráfico se muestra la distribución espacial de los valores residuales para las secciones censales del área de estudio. Las dos variables del censo parecen contribuir a explicar la varianza en la variable de respuesta, pero no la exposición al TCE. Además, aunque hay menos autocorrelación espacial en los residuos del modelo con covariables que en el modelo nulo, está claro que hay información en los residuos que deberíamos intentar utilizar. Una prueba exacta de autocorrelación espacial en los residuos conduce a conclusiones similares
+
+Dado que la prueba de Moran está destinada a detectar la autocorrelación espacial, podemos intentar ajustar un modelo teniendo esto en cuenta. Sin embargo, no debemos olvidar que las especificaciones erróneas detectadas por la I de Moran pueden tener una variedad de causas.
+```{r}
+NYlistw <- nb2listw(NY_nb, style = "B")
+lm.morantest(nylm, NYlistw)
+```
+
+Antes de analizar la estimación del modelo con más detalle, vale la pena mencionar el estimador de probabilidad de perfil aproximado. Suponiendo que la variable de interés se ha desvinculado, y que las ponderaciones espaciales están estandarizadas por filas, el estimador de un paso del parámetro de regresión espacial puede producir más información comparativa que el I de Moran. Para la comparación, mostramos la estimación del parámetro de máxima verosimilitud ajustada utilizando los mismos datos:
+
+```{r}
+NYlistwW <- nb2listw(NY_nb, style = "W")
+
+aple(residuals(nylm), listw=NYlistwW)
+
+spautolm(Z~PEXPOSURE+PCTAGE65P+PCTOWNHOME, data=NY8, listw=NYlistwW)$lambda
+
+```
 
 ### Modelos autorregresivos simultáneos
 
 ### Modelos autorregresivos condicionales
+
+La especificación CAR se basa en la distribución condicional de los términos de error espacial. En este caso, se da la distribución de $e_i$ condicionada sobre $e_{-i}$ (el vector de todos los términos de error aleatorio menos $e_i$ mismo). En lugar de todo el vector $e_{-i}$, solo se utilizan los vecinos del área $i$, definidos de una manera elegida. Los representamos por $e_{j\sim i}$. Entonces, una forma sencilla de poner la distribución condicional de $e_i$ es:
+$e_i|e_{j\sim i} \sim N(\sum_{j\sim i}\cfrac{c_{ij}e_j}{\sum_{j\sim i}c_{ij}}, \cfrac{\sigma^2_{e_i}}{\sum_{j\sim i}c_{ij}} )$
+donde $c_{ij}$ son parámetros de dependencia similares a $b_{ij}$. Sin embargo, especificar las distribuciones condicionales de los términos de error no implica que exista la distribución conjunta. Para tener una distribución adecuada, se deben establecer algunas restricciones en los parámetros del modelo. Para nuestros propósitos de modelado, las pautas anteriores serán suficientes para obtener una especificación CAR adecuada en la mayoría de los casos.
+
+Para ajustar un modelo CAR, podemos usar la función spautolm nuevamente. Esta vez configuramos el argumento family = "CAR" para especificar que estamos ajustando este tipo de modelos.
+
+```{r}
+nycar <- spautolm(Z~PEXPOSURE+PCTAGE65P+PCTOWNHOME , data=NY8, family="CAR",listw=NYlistw)
+summary(nycar)
+```
+
+Los coeficientes estimados de las covariables en el modelo son muy similares a los obtenidos con los modelos SAR. Sin embargo, los valores p de dos covariables, la distancia al TCE más cercano y el porcentaje de personas que poseen una vivienda, están ligeramente por encima del umbral de 0,05. La prueba de razón de verosimilitud indica que existe una autocorrelación espacial significativa y el valor estimado de $\lambda$ es 0.0841.
+
+Si se considera una regresión ponderada, utilizando el tamaño de la población como ponderaciones, el mismo modelo para dar cuenta de la distribución heterogénea de la población elimina por completo la autocorrelación espacial en los datos. Los coeficientes de las covariables no cambian mucho y todas se vuelven significativas. Por tanto, modelar la autocorrelación espacial mediante especificaciones SAR o CAR no modifica los resultados obtenidos.
+
+```{r}
+nycarw <- spautolm(Z~PEXPOSURE+PCTAGE65P+PCTOWNHOME, data=NY8, family="CAR",listw=NYlistw, weights=POP8)
+summary(nycarw)
+```
+
+
 
 ### Ajuste de modelos de regresión espacial
