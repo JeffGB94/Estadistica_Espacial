@@ -100,7 +100,7 @@ library(sf)
 library(spdep)
 ```
 
-````{r}
+```{r}
 NY8 <- readOGR("Base de datos", "NY8_utm18")
 TCE <- readOGR("Base de datos", "TCE")
 cities <- readOGR("Base de datos", "NY8cities")
@@ -125,6 +125,7 @@ La figura $a)$ muestra las principales ciudades en el área de estudio y $b)$ la
 spplot(NY8, c("PCTAGE65P"))
 spplot(NY8, c("PCTAGE65P"), col="transparent")
 ```
+
 ```{r}
 library("RColorBrewer")
 #color palette creator function
@@ -149,7 +150,7 @@ La creación de ponderaciones espaciales es un paso necesario en el uso de datos
 
 Tratar de detectar patrones en mapas de residuos visualmente no es una opción aceptable, por lo que se incluyen un montón de funciones en el paquete **spdep** para ayudar.
 
-Las viñetas **"nb","CO69" ** y **"sids"** en **spdep** incluyen discusiones sobre la creación y el uso de ponderaciones espaciales, y se pueden acceder a ellas de la siguiente manera:
+Las viñetas **"nb","CO69"** y **"sids"** en **spdep** incluyen discusiones sobre la creación y el uso de ponderaciones espaciales, y se pueden acceder a ellas de la siguiente manera:
 
 ```{r}
 vignette("nb",package = "spdep")
@@ -175,9 +176,9 @@ plot(NY_nb, coordinates(NY8), pch=19, cex=0.6, add=TRUE)
 
 La figura muestra el gráfico vecino completo para el área de estudio de ocho condados.
 
-Como ahora se tiene un objeto nb para examinar, se pueden presentar los métodos estándar para estos objetos. Hay métodos  de impresión, resumen, diagrama y otros; el método de resumen presenta una tabla de la distribución del número de enlace, y tanto el método de impresión como el de resumen informan de la asimetría y la presencia de observaciones sin vecinos; la asimetría está presente cuando $i$ es un vecino de $j$ pero $j$ no es un vecino de $i$.
+Como ahora se tiene un objeto nb para examinar, se pueden presentar los métodos estándar para estos objetos. Hay métodos de impresión, resumen, diagrama y otros; el método de resumen presenta una tabla de la distribución del número de enlace, y tanto el método de impresión como el de resumen informan de la asimetría y la presencia de observaciones sin vecinos; la asimetría está presente cuando $i$ es un vecino de $j$ pero $j$ no es un vecino de $i$.
 
-Con motivos de simplicidad al mostrar como crear objetos vecinos, se trabaja con un subconjunto del mapa que consta de los censos dentro de Syracuse, aunque los mismos principios se aplican al conjunto de datos completo. 
+Con motivos de simplicidad al mostrar como crear objetos vecinos, se trabaja con un subconjunto del mapa que consta de los censos dentro de Syracuse, aunque los mismos principios se aplican al conjunto de datos completo.
 
 ```{r}
 Syracuse <- NY8[NY8$AREANAME == "Syracuse city",]
@@ -185,8 +186,7 @@ Sy0_nb <- subset(NY_nb, NY8$AREANAME == "Syracuse city")
 summary(Sy0_nb)
 ```
 
-Se crean varios objetos vecinos de otras maneras para usarlos mas adelante.Tres son k objetos vecinos mas cercanos, tomando k puntos mas cercanos como vecinos (k=1,2 y 4 en este caso); esto se adapta a lo largo del área de estudio, teniendo en cuenta las diferencias en las densidades de área.
-Naturalmente, en la mayoría de los casos,esto conduce a vecinos asimétricos, pero asegurará que todas las áreas tengan **k** vecinos.
+Se crean varios objetos vecinos de otras maneras para usarlos mas adelante.Tres son k objetos vecinos mas cercanos, tomando k puntos mas cercanos como vecinos (k=1,2 y 4 en este caso); esto se adapta a lo largo del área de estudio, teniendo en cuenta las diferencias en las densidades de área. Naturalmente, en la mayoría de los casos,esto conduce a vecinos asimétricos, pero asegurará que todas las áreas tengan **k** vecinos.
 
 ```{r}
 coords <- coordinates(Syracuse)
@@ -203,7 +203,7 @@ El objeto k= también es útil para encontrar la distancia mínima a la que toda
 
 ## Objetos de ponderaciones espaciales
 
-La ponderación espacial se puede ver como una lista de ponderaciones espaciales indexadas por una lista de vecinos entre \textit{i}  y  \textit{j}  esel \textit{k-ésimo} elemento del \textit{i-ésimo} componente de la lista de ponderaciones, y \textit{k} nos dice cual de los \textit{i-ésimos} valores del componente de la lista de vecinos es igual a \textit{j}. Si \textit{j} no está presente en el \textit{i-ésimo} componente de la lista de vecinos, \textit{j} no es un vecino de \textit{i}. Por ello algunas de las ponderaciones \textit{$w_{ij}$} de la matriz de ponderaciones serán cero.
+La ponderación espacial se puede ver como una lista de ponderaciones espaciales indexadas por una lista de vecinos entre \textit{i} y \textit{j} esel \textit{k-ésimo} elemento del \textit{i-ésimo} componente de la lista de ponderaciones, y \textit{k} nos dice cual de los \textit{i-ésimos} valores del componente de la lista de vecinos es igual a \textit{j}. Si \textit{j} no está presente en el \textit{i-ésimo} componente de la lista de vecinos, \textit{j} no es un vecino de \textit{i}. Por ello algunas de las ponderaciones \textit{$w_{ij}$} de la matriz de ponderaciones serán cero.
 
 Una vez se establece la lista de los conjuntos de los vecinos en nuestra área de estudio, se procese a asignar los pesos espaciales, también es de tener en cuenta que se utiliza una notación bionaria cuando se sabe poco del proceso especial, dónde no hay una relación de vecino se pone 0 (cero) en caso contrario será la unidad.
 
@@ -217,7 +217,7 @@ names(Sy0_lw_W)
 names(attributes(Sy0_lw_W))
 ```
 
-Para el `style = "W"`,  los pesos varían entre la unidad divida por el mayor y el menor número de vecinos, y las sumas de los pesos para cada entidad de área son la unidad. Este estilo se puede interpretar como el \textbf{valor medio entre vecinos}. Los pesos de los enlaces que se originan en áreas con pocos vecinos son mayores que los que se originan en áreas con muchos vecinos, quizá aumentando las entidades de área en el borde del área de estudio sin querer. Esta representación ya no es simétrica, pero es similar tiende a ser simétrica.
+Para el `style = "W"`, los pesos varían entre la unidad divida por el mayor y el menor número de vecinos, y las sumas de los pesos para cada entidad de área son la unidad. Este estilo se puede interpretar como el \textbf{valor medio entre vecinos}. Los pesos de los enlaces que se originan en áreas con pocos vecinos son mayores que los que se originan en áreas con muchos vecinos, quizá aumentando las entidades de área en el borde del área de estudio sin querer. Esta representación ya no es simétrica, pero es similar tiende a ser simétrica.
 
 ```{r}
 1/rev(range(card(Sy0_lw_W$neighbours)))
@@ -229,15 +229,15 @@ summary(sapply(Sy0_lw_W$weights, sum))
 
 \textbf{Las funciones:}
 
-- `card` cuenta el número de vecinos en cada región en la lista de vecinos.
+-   `card` cuenta el número de vecinos en cada región en la lista de vecinos.
 
-- `range` toma el valor mínimo y el máximo.
+-   `range` toma el valor mínimo y el máximo.
 
-- `rev` revierte el vector 
+-   `rev` revierte el vector
 
-- `unlist` saca la información o datos atómicos de una lista
+-   `unlist` saca la información o datos atómicos de una lista
 
-- `sapply` aplica la función suma a cada uno de los vectores asociado a las áreas.
+-   `sapply` aplica la función suma a cada uno de los vectores asociado a las áreas.
 
 La configuración de `style = "B"` - \textit{Binario} retiene un peso de unidad para cada relación de vecino, pero en este caso, las sumas de pesos de las áreas difieren según el número de áreas vecinas que tienen.
 
@@ -259,19 +259,19 @@ summary(sapply(Sy0_lw_idwB$weights, sum))
 
 \textbf{La función:}
 
-- `nbdists` devuelve las distancias euclidianas dadas por un vector de enlaces de vecinos (un objeto nb). 
+-   `nbdists` devuelve las distancias euclidianas dadas por un vector de enlaces de vecinos (un objeto nb).
 
-- `nb2listw` toma una lista de vecinos y lo convierte en un objeto de pesos.
+-   `nb2listw` toma una lista de vecinos y lo convierte en un objeto de pesos.
 
-- `lapply` aplica a cada distancia euclidiana el inverso.
+-   `lapply` aplica a cada distancia euclidiana el inverso.
 
-La siguiente figura muestra tres representaciones de ponderaciones espaciales para Syracuse mostradas como matrices. La imagen `style = "W"` de la izquierda es asimétrica, con colores más oscuros ue muestran pesos más gandes para áreas con pocos vecinos. Los otros dos paneles son simétricos, pero expresan diferentes suposiciones sobre las fortalezas de las relaciones con los vecinos. 
+La siguiente figura muestra tres representaciones de ponderaciones espaciales para Syracuse mostradas como matrices. La imagen `style = "W"` de la izquierda es asimétrica, con colores más oscuros ue muestran pesos más gandes para áreas con pocos vecinos. Los otros dos paneles son simétricos, pero expresan diferentes suposiciones sobre las fortalezas de las relaciones con los vecinos.
 
 ![Tres representaciones de ponderaciones espaciales para Syracuse](matrices-ponderaciones.png)
 
 La función `nb2listw` permite manejar listas de vecinos con áreas sin vecinos. Esto es debido porque la representación del conjunto vacío sea cero y debería ser representado como `NA` pero esto generaría problemas más adelante.
 
-Es por esta razón que el argumento predeterminado es `cero.policy=FALSE`, lo que genera un error cuando se proporciona un argumento `nb` con áreas sin vecinos. Con el argumento `TRUE`permite la creación del objeto de ponderaciones espaciales, con ponderaciones cero. 
+Es por esta razón que el argumento predeterminado es `cero.policy=FALSE`, lo que genera un error cuando se proporciona un argumento `nb` con áreas sin vecinos. Con el argumento `TRUE`permite la creación del objeto de ponderaciones espaciales, con ponderaciones cero.
 
 ```{r, error=TRUE}
 Sy0_lw_D1 <- nb2listw(Sy11_nb, style = "B")
@@ -283,16 +283,16 @@ Un problema paralelo de los conjuntos de datos con valores perdidos en las varia
 
 ## Manejo de objetos de ponderaciones espaciales
 
-Hay varios paquetes contribuidos que brindan soporte para matrices dispersas, entre las cuales `Matrix` es un paquete recomendado. La envoltura `as_dgRMatrix_listw` convierte un objeto `listw` en  la  matriz  dispersa  de  formato  orientado  a  filas  comprimidas  ordenadas  por  `Matrix`,  como un objeto `dgRMatrix`, una subclase de la clase virtual `RsparseMatrix`. Es más fácil hacer una matriz dispersa orientada a filas a partir de un objeto de ponderaciones espaciales, ya que las ponderaciones están orientadas a filas. Una función que se usa mucho dentro de las funciones de prueba y ajuste de modelos es `listw2U`, que devuelve un objeto `listw` simétrico que representa la matriz de ponderaciones espaciales $\frac{1}{2}(W+W^T)$
+Hay varios paquetes contribuidos que brindan soporte para matrices dispersas, entre las cuales `Matrix` es un paquete recomendado. La envoltura `as_dgRMatrix_listw` convierte un objeto `listw` en la matriz dispersa de formato orientado a filas comprimidas ordenadas por `Matrix`, como un objeto `dgRMatrix`, una subclase de la clase virtual `RsparseMatrix`. Es más fácil hacer una matriz dispersa orientada a filas a partir de un objeto de ponderaciones espaciales, ya que las ponderaciones están orientadas a filas. Una función que se usa mucho dentro de las funciones de prueba y ajuste de modelos es `listw2U`, que devuelve un objeto `listw` simétrico que representa la matriz de ponderaciones espaciales $\frac{1}{2}(W+W^T)$
 
-Los objetos vecinos y de pesos pueden ser producidos en otros software e importarse a R y además se pueden exportar sin dificultad. Como ejemplo se han generado algunos archivos de [GeoDa](https://sgsup.asu.edu/geodacenter-redirect) a partir de distritos censales de Syracuse escritos como un shapefile, con el centroide utilizando aquí almacenado en el marco de datos. Los dos primeros son para vecinos de contigüidad. Estos archivos denomidos en formato GAL contienen solo información de vecinos y se describen en detalle en el archivo de ayuda que acompaña a la función `read.gal` 
+Los objetos vecinos y de pesos pueden ser producidos en otros software e importarse a R y además se pueden exportar sin dificultad. Como ejemplo se han generado algunos archivos de [GeoDa](https://sgsup.asu.edu/geodacenter-redirect) a partir de distritos censales de Syracuse escritos como un shapefile, con el centroide utilizando aquí almacenado en el marco de datos. Los dos primeros son para vecinos de contigüidad. Estos archivos denomidos en formato GAL contienen solo información de vecinos y se describen en detalle en el archivo de ayuda que acompaña a la función `read.gal`
 
 ```{r}
 Sy14_nb <- read.gal("Base de datos/Sy_GeoDa1.GAL")
 isTRUE(all.equal(Sy0_nb, Sy14_nb, check.attributes = FALSE))
 ```
 
-La función `write.nb.gal` se utiliza para escribir archivos en formato `GAL` a partir de `nb` objetos. GeoDa  también  crea  archivos  en  formato  `GWT`,  descritos  en  la  documentación  de  GeoDa  y el  archivo  de  ayuda,  que  también  contienen  información  de  distancia  para  el  enlace  entre  las áreas, y se almacenan en una representación dispersa de tres columnas. Se pueden leer usando `read.gwt2nb`, aquí para un esquema de cuatro vecinos más cercanos, y solo usando los enlaces de vecinos.
+La función `write.nb.gal` se utiliza para escribir archivos en formato `GAL` a partir de `nb` objetos. GeoDa también crea archivos en formato `GWT`, descritos en la documentación de GeoDa y el archivo de ayuda, que también contienen información de distancia para el enlace entre las áreas, y se almacenan en una representación dispersa de tres columnas. Se pueden leer usando `read.gwt2nb`, aquí para un esquema de cuatro vecinos más cercanos, y solo usando los enlaces de vecinos.
 
 ```{r}
 Sy16_nb <- read.gwt2nb("Base de datos/Sy_GeoDa4.GWT")
@@ -301,7 +301,7 @@ isTRUE(all.equal(Sy10_nb, Sy16_nb, check.attributes = FALSE))
 
 Un conjunto similar de funciones está disponible para intercambiar pesos espaciales con la Biblioteca de Econometrics Espacial. La representación dispersa de pesos es similar al formato `GWT` y se puede importar usando `read.dat2listw.`
 
-La exportación a tres formatos diferentes pasa por la función `listw2sn`, que convierte un objeto de pesos espaciales en una representación dispersa de tres columnas. El marco de datos de salida se puede escribir como un archivo en formato `GWT` con `write.sn2gwt` o como una representación de texto de una matriz dispersa para Matlab™ con `write.sn2dat`. Los archivos escritos con `write.sn2gwt` se pueden leer en Stata™ con `spmat import W using`. Existe una función llamada `listw2WB` para crear una lista de pesos espaciales para `WinBUGS`, que se escribirá en un archivo usando  `dput`. Para objetos vecinos, se puede usar `nb2WB`, estableciendo todos los pesos a la unidad. De manera similar, un objeto vecino se puede exportar a un archivo con `nb2INLA`, para pasar datos al argumento del \textbf{gráfico} para el modelo `"bym"` en el ajuste usando `inla`. También es posible utilizar `nb2gra` en el paquete `BayesX` para convertir `nb` objetos al formato gráfico `gra`.
+La exportación a tres formatos diferentes pasa por la función `listw2sn`, que convierte un objeto de pesos espaciales en una representación dispersa de tres columnas. El marco de datos de salida se puede escribir como un archivo en formato `GWT` con `write.sn2gwt` o como una representación de texto de una matriz dispersa para Matlab™ con `write.sn2dat`. Los archivos escritos con `write.sn2gwt` se pueden leer en Stata™ con `spmat import W using`. Existe una función llamada `listw2WB` para crear una lista de pesos espaciales para `WinBUGS`, que se escribirá en un archivo usando `dput`. Para objetos vecinos, se puede usar `nb2WB`, estableciendo todos los pesos a la unidad. De manera similar, un objeto vecino se puede exportar a un archivo con `nb2INLA`, para pasar datos al argumento del \textbf{gráfico} para el modelo `"bym"` en el ajuste usando `inla`. También es posible utilizar `nb2gra` en el paquete `BayesX` para convertir `nb` objetos al formato gráfico `gra`.
 
 El `mat2listw` se puede utilizar para revertir el proceso, cuando una matriz de ponderaciones se ha leído en `R` y necesita convertirse en un vecino y un objeto de lista de ponderaciones. Desafortunadamente, esta función no establece el estilo del objeto `listw` a un valor conocido, utilizando `M` para señalar esta falta de conocimiento. Entonces es habitual reconstruir el objeto `listw`, tratando el componente de vecinos como un objeto `nb`, el componente de pesos como una lista de pesos generales y estableciendo el estilo en la función `nb2listw` directamente. Se utilizó para la importación inicial de las contigüidades de ocho condados, como se muestra en detalle en la página de ayuda `NY_data` proporcionada con `spdep`.
 
@@ -311,7 +311,7 @@ Finalmente, existe una función `nb2lines` para convertir listas de vecinos en o
 
 En la siguiente figura se utilizó `listw2mat`para convertir un objeto de pesos espaciles en una matriz densa para su visualización. La misma función se utiliza para contruir una representación densada de l amatriz $(I-\rho \omega)$ para simular la autocorrelación espacial dentro de la función `invlrW`, donde $W$ es una matriz de ponderaciones, $\rho$ es un coeficiente de autocorrelación espacial e $I$ es la matriz de identidad. Este enfoque no impone condiciones estrictas para invertir las matrices a no ser de que sea una matriz singular, y sólo se aplica a simulaciones de un proceso autoregresivo simultáneo.
 
-![Simulación de la autocorrelación espacial: gráficos de retardo espacial, que muestran una línea más suave ponderada localmente](Fig 9.4)
+![Simulación de la autocorrelación espacial: gráficos de retardo espacial, que muestran una línea más suave ponderada localmente](Fig%209.4)
 
 Para la simulación se utilizó un vector de número aleatorios iguales al número de secciones censales en Siracusa, usando las ponderaciones de contigüidad estandarizadas por filas para introducir la autocorrelación.
 
@@ -327,9 +327,9 @@ El resultado que se muestra en la figura anterior, muestra el retardo espacial d
 
 El método de retraso para objetos `listw` crea valores de "retraso espacial": $lag(y_i) = \sum_{j\in N_{i}} \omega_{ij}y_j$ para valores observados $y_i$; $N_i$ es el conjunto de vecinos de $i$. Si el estilo del objeto de ponderaciones es la estandarización de filas, los valores de $lag(y_i)$ serán promedios sobre los conjuntos de vecinos para cada $i$, más bien como una ventana móvil definida por $N_i$ e incluyendo valores ponderados por $\omega_{ij}$.
 
-Para el análisis de datos de un área depende de manera crucial la construcción de los pesos espaciales, por ello se ha tomado el tiempo para describir las opciones que enfrenta el investigador. Ahora se procederá a modelar y probar la autocorrelación espacial utilizando supuestos sobre los procesos espaciales subyacentes. 
+Para el análisis de datos de un área depende de manera crucial la construcción de los pesos espaciales, por ello se ha tomado el tiempo para describir las opciones que enfrenta el investigador. Ahora se procederá a modelar y probar la autocorrelación espacial utilizando supuestos sobre los procesos espaciales subyacentes.
 
-# Prueba de autocorrelación espacial 
+# Prueba de autocorrelación espacial
 
 Ahora que se tiene variedad de formas de construir pesos espaciales, se puede comenzar a usarlos para probar la presencia de autocorrelación espacial. Antes de comenzar, es muy útil revisar las suposiciones que se hacen en las pruebas; se usará la $I$ de Moran como ejemplo, pero las consecuencias también se aplican a otras pruebas.
 
@@ -339,14 +339,13 @@ Otro problema que puede surgir es que los pesos espaciales que usamos para las p
 
 Dado que se sabe que la variable simulada anteriormente, se extrae al azar de la distribución normal, se puede manipular para ver qué sucede con los resultados de las pruebas en diferentes condiciones. La prueba $I$ de Moran , se calcula entonces como la razón del producto de la variable de interés y su rezago espacial, con el producto cruzado de la variable de interés y se ajusta a los pesos espaciales utilizados:
 
-
 $$I = \cfrac{n}{\sum_{i=1}^{n} \sum_{j=1}^{n} \omega_{ij}} \cfrac{\sum_{i=1}^{n} \sum_{j=1}^{n} \omega_{ij} \left(y_i - \overline{y}\right)\left(y_j - \overline{y}\right)}{\sum_{i=1}^{n}\left(y_i-\overline{y}\right)^2},$$
 
 donde $y_i$ es la i-ésima observación, $\overline{y}$ es la media de la variable de interés y $w_{ij}$ es el peso espacial del vínculo entre i y j.
 
-Los resultados del test para cinco configuraciones, se recopilan a continuación; la primera columna contiene el valor observado de $I$, la segunda es el valor esperado (la cual es $-1/(n-1)$ para casos de media centrada), la tercera es la varianza del
-estadístico bajo aleatorización, a continuación la desviación estándar y finalmente, el valor-p de la prueba para la alternativa $I>E(I)$.
+Los resultados del test para cinco configuraciones, se recopilan a continuación; la primera columna contiene el valor observado de $I$, la segunda es el valor esperado (la cual es $-1/(n-1)$ para casos de media centrada), la tercera es la varianza del estadístico bajo aleatorización, a continuación la desviación estándar y finalmente, el valor-p de la prueba para la alternativa $I>E(I)$.
 
+```{=tex}
 \begin{table}[H]
 \centering
 \begin{tabular}{@{}lrrrrr@{}}
@@ -364,7 +363,7 @@ trend\_x             & 0.23747  & -0.01613 & 0.00575 & 3.34   & 0.00041 \\
 lm(trend\_x ~ et) & -0.0538  & -0.0309  & 0.0054  & -0.312 & 0.62    \\ \bottomrule
 \end{tabular}
 \end{table}
-
+```
 ```{r}
 moran.test(uncorr_x, listw=Sy0_lw_W)
 moran.test(autocorr_x, listw=Sy0_lw_W)
@@ -380,16 +379,16 @@ moran_t1 <- lm.morantest(lm(trend_x ~ et), listw=Sy0_lw_W)
 ```
 
 Esto demuestra lo importante que puede ser entender que las pruebas de autocorrelación espacial también pueden reaccionar a un modelo mal especificado de la media, y que la omisión de una variable espacialmente modelada de la función media 'parecerá' como autocorrelación espacial a las pruebas.
- 
+
 ## Pruebas globales
+
 Quizá la prueba global mas común es `moran.test`y por esta razón se continuará usandola. Otras pruebas globales implementadas en el paquete `spdep` incluyen la $C$ de Geary (`geary.test()`), la $G$ global de GetisOrd (`gobalG.test()`) y la prueba de Mantel de producto cruzado general espacial, que incluye la $I$ de Moran, la $C$ de Geary y la variante Sokal de la C de Geary como formas alternativas (`sp.mantel.mc()`).
 
 Todos estos test son para variables continuas, con `moran.test()` que tiene un argumento para usar un ajuste para una variable continua clasificada.
 
-También  hay pruebas de recuento de combinaciones para variables categóricas, con la variable de interés representada como un factor: `joincount.test()` para combinaciones del mismo color, `joincount.multi()` para combinaciones del mismo y de diferente color.
- 
-El resultado de los test es una desviación estándar que se compara con la distribción Normal para encontrar el valor de probabilidad del estadístico observado bajo la hiótesis nula $H_0$ de no dependencia espacial para los pesos espaciales elegidos; la mayoria de veces la prueba es unilateral, con la hipótesis alternativa $H_1$ de que el estadístico observado es significativamente mayor que su valor esperado.
+También hay pruebas de recuento de combinaciones para variables categóricas, con la variable de interés representada como un factor: `joincount.test()` para combinaciones del mismo color, `joincount.multi()` para combinaciones del mismo y de diferente color.
 
+El resultado de los test es una desviación estándar que se compara con la districión Normal para encontrar el valor de probabilidad del estadístico observado bajo la hipótesis nula $H_0$ de no dependencia espacial para los pesos espaciales elegidos; la mayoria de veces la prueba es unilateral, con la hipótesis alternativa $H_1$ de que el estadístico observado es significativamente mayor que su valor esperado.
 
 ```{r}
 moran.test(NY8$Cases, listw=nb2listw(NY_nb))
@@ -427,6 +426,78 @@ pnorm((boot2$t0 - mean(boot2$t))/sd(boot2$t[,1]), lower.tail=FALSE)
 
 ## Pruebas locales
 
+Las pruebas globales de autocorrelación espacial se calculan en base a las relaciones locales entre los valores observados y sus vecinos. Debido a esto se pueden dividir las pruebas globales en sus componentes y construir pruebas localizadas destinadas a detectar agrupamientos "Clusters" o "hotspots" observaciones con vecinos muy diferentes.
+
+Para entrar en detalle se explicará a continuación un diagrama de dispersión de Moran de la variable de recuento de casos de leucemia; para un análisis de los diagramas de dispersión de Moran. En el gráfico se coloca en el eje x la variable de interés y en el $y$ la suma ponderada espacialmente de los vecinos. La I de Moran global es una relación lineal y ve representado como una pendiente; el gráfico se divide en cuatro cuadrantes que representan los valores medios de la variable y sus valores rezagados: bajo-bajo, bajo-alto, alto-bajo y alto-alto.
+
+```{r}
+moran.plot(NY8$Cases, listw = nb2listw(NY_nb, style = "C"))
+```
+
+Dado que el $I$ de Moran es global al igual que los coeficientes de correlación son similares (una relación lineal), también se pueden utilizar técnicas estándar para detectar observaciones con una influencia inusualmente fuerte en la pendiente. Específicamente, `moran.plot` llama a `influence.measures` en el modelo lineal de `lm(wx` $\sim$ `x)` proporcionando el coeficiente de pendiente, donde `wx` es el valor espacialmente rezagado de `x`. Esto significa que se puede ver si las relaciones locales particulares pueden influir en la pendiente más que proporcionalmente. En la siguiente figura se muestra áreas con influencia significativa (usando criterios estándar) codificadas por su cuadrante en el diagrama de dispersión de Moran.
+
+![Tratados con influencia del cuadrante de la gráfica de dispersión de Moran](Fig%209.7.png)
+
+Los valores de $I_i$ de Moran local se construyen como las $n$ componentes sumados para llegar a $I$ de Moran global:
+
+$$I_i = \cfrac{(y_i - \overline{y})\sum_{j=1}^{n} \omega_{ij}(y_{j} - \overline{y})}{\cfrac{\sum_{i=1}^{n}(y_{i}-\overline{y})^2}{n}},$$
+
+donde se sume que la media global $\overline{y}$ es una representación adecuada de la variable de interés $y$. Los dos componentes del numerador, $(y_i - \overline{y})$ y $\sum_{j=1}^{n} \omega_{ij}(y_{j} - \overline{y})$ aparecen sin centrarse en el diagrama de dispersión de Moran.
+
+La estadística local puede probarse en busca de divergencia de los valores esperados, bajo supuestos de normalidad y aleatorización analítica, y utilizando aproximaciones de `Sasslepoint` y métodos exactos. Los dos últimos pueden ser importantes porque el número de vecinos de cada observación es muy pequeño y esto, a su vez, puede hacer que la adopción del supuesto de normalidad sea problemático. 
+
+Es difícil detectar patrones locales residuales en presencia de autocorrelación espacial global. Por esta razón, los resultados para la dependencia local no deben verse como ``absolutos", sino que estan condicionados al menos por la autocorrelación espacial global, es decir por la posible influencia de los procesos de generación de datos espaciales en un rango de escalas desde el global hasta el local. Dependencia no detectada en la escala de las observaciones.
+
+```{r}
+lm1 <- localmoran(NY8$Cases, listw = nb2listw(NY_nb, style = "C"))
+
+lm2 <- as.data.frame(localmoran.sad(lm(Cases ~ 1, NY8), nb = NY_nb, style = "C"))
+
+lm3 <- as.data.frame(localmoran.exact(lm(Cases ~ 1, NY8), nb = NY_nb, style = "C"))
+
+```
+
+Waller y Gotway (2004, p. 239) extienden su tratamiento de hipótesis de riesgo constante al $I_i$ local de Moran, y podemos seguir su ejemplo:
+
+```{r}
+r <- sum(NY8$Cases)/sum(NY8$POP8)
+rni <- r * NY8$POP8
+lw <- nb2listw(NY_nb, style = "C")
+sdCR <- (NY8$Cases - rni)/sqrt(rni)
+wsdCR <- lag(lw, sdCR)
+I_CR <- sdCR * wsdCR
+```
+
+La siguiente figura muestra los dos conjuntos de valores de $I_i$ de Moran local, calculados de la forma estándar y utilizando el supuesto de Poisson para la hipótesis de riesgo constante. Ya sabemos que el I global de Moran puede variar en valor e inferencia dependiendo de nuestras suposiciones, por ejemplo, que la inferencia debe tener en cuenta las desviaciones de nuestras suposiciones distributivas. Lo mismo se aplica aquí al supuesto para la distribución de Poisson de que su media y desviación estándar son iguales, mientras que la dispersión excesiva parece ser un problema en los datos que también muestran autocorrelación. Hay algunos cambios de signo entre los mapas, con los valores de la hipótesis de riesgo constante algo más alejados de cero.
+
+![Valores de $I_i$ locales de Moran calculados directamente y utilizando la hipótesis de riesgo constante](Fig 9.8.png)
+
+También podemos construir una prueba de Monte Carlo simple de la hipótesis de riesgo constante de los valores locales de $I_i$ de Moran, simulando mucho como en el caso global, pero ahora conservando todos los resultados locales. Una vez que se completa la simulación, extraemos el rango del valor $I_i$ de Moran local de riesgo constante observado para cada tramo y calculamos su valor de probabilidad para el número de simulaciones realizadas. Usamos un enfoque paramétrico para simular los recuentos locales utilizando el recuento local esperado como parámetro de `rpois`, porque los recuentos de vecinos son muy bajos y hacen que la permutación sea imprudente. Llevar a cabo pruebas de permutación utilizando todo el conjunto de datos tampoco parece prudente, porque entonces estaríamos comparando iguales con diferentes (figura 5)
+
+```{r}
+set.seed(1234)
+nsim <- 999
+N <- length(rni)
+sims <- matrix(0, ncol = nsim, nrow = N)
+
+for (i in 1:nsim) {
+  y <- rpois(N, lambda = rni)
+  sdCRi <- (y - rni)/sqrt(rni)
+  wsdCRi <- lag(lw, sdCRi)
+  sims[, i] <- sdCRi * wsdCRi
+}
+
+xrank <- apply(cbind(I_CR, sims), 1, function(x) rank(x)[1])
+diff <- nsim - xrank
+diff <- ifelse(diff > 0, diff, 0)
+pval <- punif((diff + 1)/(nsim + 1))
+```
+
+Finalmente, hacemos zoom para examinar los valores de probabilidad $I_i$ de Moran locales para tres métodos de cálculo para los tramos en y cerca de la ciudad de Binghampton (Fig. 6). Parece que el uso del enfoque de riesgo constante maneja la heterogeneidad en los conteos mejor que las alternativas. Estos resultados concuerdan en general con los alcanzados por Waller y Gotway (2004, p. 241), pero notamos que nuestro modelo subyacente es muy simplista. Encontrar la autocorrelación espacial no es un objetivo en sí mismo, ya sea local o global, sino más bien un paso en un proceso que conduce a un modelo adecuado. Es a esta tarea a la que nos dirigimos ahora.
+
+![Valores de probabilidad para todas las secciones censales, $I_i$ de Moran local: supuestos de normalidad y aleatorización, aproximación del punto de silla, valores exactos e hipótesis de riesgo constante](Fig 9.9.png)
+![Valores de probabilidad para secciones censales en y cerca de la ciudad de Binghampton, $I_i$ local de Moran: suposición de normalidad, valores exactos e hipótesis de riesgo constante](Fig 9.10.png)
+
 # Ajuste de modelos de datos de área
 
 ## Enfoques de estadística espacial
@@ -436,5 +507,3 @@ pnorm((boot2$t0 - mean(boot2$t))/sd(boot2$t[,1]), lower.tail=FALSE)
 ### Modelos autorregresivos condicionales
 
 ### Ajuste de modelos de regresión espacial
-
-
